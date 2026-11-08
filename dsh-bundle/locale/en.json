@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Cx Bridge",
+    "description": "Connects the local cx-bridge MCP server: the userscript extracts questions and fills answers, the model solves them, and nothing is submitted automatically."
+  }
+}

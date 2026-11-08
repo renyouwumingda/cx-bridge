@@ -1,0 +1,33 @@
+{
+  "name": "dsh-cx-bridge",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "学习通作业 AI 答题桥：把本地 cx-bridge MCP 服务接进 DSH，浏览器脚本负责提取与回填，模型负责作答，不自动提交。",
+  "license": "MIT",
+  "exports": {
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "mcp",
+    "chaoxing"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

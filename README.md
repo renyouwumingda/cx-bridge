@@ -175,3 +175,17 @@ docs/DEVLOG.md     开发日志（逐版做了什么、踩了哪些坑、实测�
 ## 许可
 
 MIT（见 `LICENSE`）。第三方项目只借鉴了做法，未复制其代码；调研材料不随仓库分发。
+
+## 作为 DSH 插件安装
+
+`dsh-bundle/` 是一个标准的 DSH bundle（`package.json` + `cordis.patch.yml` + `locale/` + `icon.svg`），
+它把本项目的 MCP 服务接进 Harness，装完会出现在「已安装的插件」里，可开关。
+
+用 `plugin_manager` 安装（不要手写 profile 的 `cordis.patch.yml`）：
+
+```
+plugin_manager(action: "install_bundle", target: "<仓库>/dsh-bundle")
+```
+
+装完需要重启 DSH 生效。换机器时改 `dsh-bundle/cordis.patch.yml` 里的两处绝对路径
+（`command` 指向 node，`args[0]` 指向 `cx-mcp.js`）。
