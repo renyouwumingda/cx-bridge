@@ -26,3 +26,6 @@ Thumbs.db
 .idea/
 .vscode/
 dist/
+
+# 做题会话的临时工作目录（图片/脚本）
+.work/

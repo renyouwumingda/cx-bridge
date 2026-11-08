@@ -1,3 +1,11 @@
+
+## v0.6.0（2026-11-08）刷章节 + 控制台改版
+
+- 面板拆成「答题 / 刷章节 / 概览」三页签；日志加了复制/清空；概览显示桥接状态、数据目录、task_id、题数/已答数。
+- 新增刷章节：章节列表跳过已完成 → 打开未完成章节 → 任务点逐个处理（视频静音 2×、文档停留计时）→ 自动下一节；进度存 GM，跳页后自动继续；随时可停。
+- 做题会话工作目录从「桌面」改为 `cx-bridge/.work`（`DSH_CWD` 默认值），桌面原先的 `cx_imgs/`、`cx_work/` 已移进 `.work/`。
+- 新增 `fixture_chapter.html` + `e2e_chapter.py`：章节列表 → 跳转 → 自动继续 → 视频播完，8 项断言全过。
+- 回归：test_server 19 OK；e2e_test / e2e_real / e2e_dowork 6/6 / e2e_newstyle 2/2 / sandbox_sim / e2e_idempotent 7 项全 PASS。
 # 开发日志（cx-bridge）
 
 > 这份文档是从仓库早期的 README 原样搬过来的：逐版记录做了什么、踩了哪些坑、实测数据与页面结构笔记。

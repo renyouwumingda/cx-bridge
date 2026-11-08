@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><title>章节刷课 fixture</title>
+<style>body{font:14px/1.6 system-ui;margin:20px} .chapter_item{padding:6px;border-bottom:1px solid #eee}
+.posCatalog_select{display:inline-block;margin:6px;padding:6px 10px;border:1px solid #ccc;cursor:pointer}</style>
+</head><body>
+<div id="app"></div>
+<script>
+const p = new URLSearchParams(location.search);
+const mode = p.get('mode') || 'course';
+const app = document.getElementById('app');
+
+function course() {
+  const items = [
+    ['第1章 电磁学基础', true],
+    ['第2章 稳恒磁场', false],
+    ['第3章 电磁感应', false],
+  ];
+  app.innerHTML = items.map(([name, done], i) =>
+    '<div class="chapter_item">' +
+      '<a href="javascript:void(0)" onclick="location.href=\'fixture_chapter.html?mode=study&ch=' + i + '\'">' + name + '</a>' +
+      (done ? ' <span class="icon blue">已完成</span>' : ' <span>未完成</span>') +
+    '</div>').join('');
+}
+
+function makeVideo() {
+  const v = document.createElement('video');
+  let t = 0;
+  Object.defineProperty(v, 'duration', { get: () => 4 });
+  Object.defineProperty(v, 'currentTime', { get: () => t, set: x => { t = x; } });
+  Object.defineProperty(v, 'paused', { get: () => !v._playing });
+  Object.defineProperty(v, 'ended', { get: () => t >= 3 });
+  v.muted = false; v.playbackRate = 1;
+  v.play = () => {
+    v._playing = true;
+    v._timer = setInterval(() => { t += 0.5; if (t >= 3) { clearInterval(v._timer); v._playing = false; } }, 300);
+    return Promise.resolve();
+  };
+  v.pause = () => { v._playing = false; };
+  return v;
+}
+
+function study() {
+  app.innerHTML = '<h3>第2章 稳恒磁场</h3>' +
+    '<div class="posCatalog_select" id="task1">2.1 磁场视频（40 min）</div>';
+  document.getElementById('task1').onclick = () => {
+    const box = document.createElement('div');
+    box.id = 'videoBox';
+    box.appendChild(makeVideo());
+    app.appendChild(box);
+  };
+}
+
+mode === 'study' ? study() : course();
+</script>
+</body></html>

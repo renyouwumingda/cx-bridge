@@ -56,7 +56,9 @@ ENGINE = os.environ.get("CX_ENGINE", "agent")
 DSH_CMD = os.environ.get("CX_DSH_CMD") or shutil.which("dsh") or "dsh"
 DSH_HOME = os.environ.get("CX_DSH_HOME", os.path.join(os.path.expanduser("~"), ".dsh"))
 DSH_PROFILE = os.environ.get("CX_DSH_PROFILE", "headless")
-DSH_CWD = os.environ.get("CX_DSH_CWD") or os.path.dirname(HERE)
+DSH_CWD = os.environ.get("CX_DSH_CWD") or os.path.join(HERE, ".work")
+
+os.makedirs(DSH_CWD, exist_ok=True)
 
 SOLVER_PROMPT = """你是做题助手。cx-bridge 里有一份待答题目，请按下面步骤做，不要问我任何问题：
 1. 先调用 cx_status，看已经有多少条答案；再调用 cx_take_questions 取题（题目、选项、图片）。
