@@ -1,9 +1,9 @@
-# 两行：一个可见的插件条目（dsh-cx-bridge）+ 一个 MCP 连接（mcp-cx-bridge）。
+# 两行：一个可见的插件条目（dsh-cx-bridge）+ 一个 MCP 连接（dsh-cx-bridge-mcp）。
 # 换机器时改 mcp 行下面两处绝对路径：node 可执行文件、cx-mcp.js。
 - insert:
     - id: dsh-cx-bridge
       name: 'dsh-cx-bridge'
-    - id: mcp-cx-bridge
+    - id: dsh-cx-bridge-mcp
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: cx-bridge

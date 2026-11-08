@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Cx Bridge",
+    "title": "dsh-cx-bridge · Chaoxing answer bridge",
     "description": "Connects the local cx-bridge MCP server: the userscript extracts questions and fills answers, the model solves them, and nothing is submitted automatically."
   }
 }

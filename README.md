@@ -193,7 +193,7 @@ plugin_manager(action: "install_bundle", target: "<仓库>/dsh-bundle")
 
 - 显示名取自 `dsh-bundle/locale/zh.json` 的 `meta.title`（**学习通答题桥**），搜索 `cx` 或 `学习通` 都能找到；
 - 卡片上的开关控制的是 bundle 里的 `dsh-cx-bridge` 这一行（一个不注册服务的空入口），
-  MCP 连接本身是同一 bundle 的第二行 `mcp-cx-bridge`，关掉整个 bundle 两者一起失效；
+  MCP 连接本身是同一 bundle 的第二行 `dsh-cx-bridge-mcp`，关掉整个 bundle 两者一起失效；
 - 真正的功能证据是会话工具列表里的 `cx_status` / `cx_take_questions` / `cx_submit_answers` / `cx_report`。
 
 > 为什么要有那个「空入口」：如果 bundle 里只有一条 MCP 连接行，它装得上、工具也能用，
