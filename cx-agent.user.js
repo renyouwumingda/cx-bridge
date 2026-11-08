@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.7.3
+// @version      0.8.0
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.7.3'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.8.0'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -353,6 +353,9 @@
     if (rows.length) return rows;
     const bg = [...el.querySelectorAll('.answerBg, .hoverDiv')].filter(r => el.contains(r));
     if (bg.length) return bg;
+    // 考试/测验整卷预览页：div.choice<qid> × N，文本在下一个兄弟节点
+    const chs = examOptionRows(el);
+    if (chs.length) return chs;
     // 作业详情 / 考试页的真实结构：<ul class="mark_letter"><li>A. xxx</li></ul>
     const lettered = [...el.querySelectorAll('ul.mark_letter > li, .mark_letter > li')].filter(r => el.contains(r));
     if (lettered.length) return lettered;
@@ -362,6 +365,7 @@
   }
 
   function markerOf(row) {
+    if (isExamOption(row)) return row;
     // 新式作业页：选项字母/debug 值直接挂在 <input name="answer<qid>" value="A"> 上
     const inp = row.querySelector && row.querySelector('input[name^="answer"][value]');
     if (inp) return inp;
@@ -372,6 +376,12 @@
 
   // 选项字母：优先看标记元素，其次看行文本开头的 "A." / "A、"
   function keyOf(row) {
+    if (isExamOption(row)) {
+      const box = row.closest('.questionLi, .TiMu, [data-questionid], [data]') || row.parentNode;
+      const arr = examOptionRows(box);
+      const i = arr.indexOf(row);
+      if (i >= 0 && i < 26) return String.fromCharCode(65 + i);
+    }
     const mk = markerOf(row);
     if (mk) {
       const t = (mk.textContent || '').trim();
@@ -387,7 +397,23 @@
     return m2 ? m2[1].toUpperCase() : '';
   }
 
+  // 考试/测验「整卷预览」页（exam-ans/mooc2/exam/preview）的真实结构：
+  //   <div class="questionLi" data="9001"> … <input name="type9001" value="0">
+  //   <div class="choice9001">A 的字母/图标</div><div class="choiceTxt">选项文本</div>
+  // 选项是 class="choice<qid>" 的 div，文本在它的下一个兄弟节点里；选中态加 check_answer。
+  function isExamOption(node) {
+    return !!node && /(^|\s)choice\d+(\s|$)/.test(String(node.className || ''));
+  }
+  function examOptionRows(el) {
+    return [...el.querySelectorAll('[class^="choice"], [class*=" choice"]')].filter(isExamOption);
+  }
+
   function optionText(row) {
+    if (isExamOption(row)) {
+      const t = ((row.nextElementSibling && row.nextElementSibling.innerText) || row.innerText || '')
+        .trim().replace(/^[A-Za-z]\s*[.、．:：]\s*/, '');
+      return t.slice(0, 300);
+    }
     const node = row.querySelector('.answer_p') || row.querySelector('.after');
     let text = ((node || row).innerText || '').trim();
     // 去掉 "A. " / "A、" 前缀
@@ -398,6 +424,14 @@
   function detectType(el, rows) {
     // 权威来源：页面自己写的 <input type="hidden" name="answertype<qid>" value="0|1|2|3">
     // 0=单选 1=多选 2=填空 3=判断（九九助手同款映射），比任何 DOM 猜测都可靠。
+    const tp = el.querySelector('input[name^="type"]');
+    if (tp) {
+      const v = String(tp.value || '').trim();
+      if (v === '0') return 'single';
+      if (v === '1') return 'multiple';
+      if (v === '2') return 'blank';
+      if (v === '3') return 'judge';
+    }
     const at = el.querySelector('input[name^="answertype"]');
     if (at) {
       const v = String(at.value || '').trim();
@@ -473,6 +507,7 @@
         _garbled: looksGarbled(stemOf(el)),
       });
     }
+    try { window.__cxb_lastExtract = out; } catch (e) {}
     return out;
   }
 
@@ -804,6 +839,10 @@
       }
     });
   }
+
+  // 测试钩子（生产无副作用：只是把函数挂到 window，页面本身不会调用）
+  try { window.__cxb_fillAll = () => fillAll(); } catch (e) {}
+  try { window.__cxb_injectAnswers = (a) => { answers = a; }; } catch (e) {}
 
   async function fillAll() {
     const containers = questionContainers();
@@ -1632,6 +1671,7 @@
     // 页面类型与字体加密先说清楚：这是「答了也白答」的两种典型情况
     const kind = pageKind();
     if (kind === 'exam') log('⚠ 这是考试页：我只提取和填，绝不提交；保存入口和作业页不一样，必要时你手动点保存');
+    if (kind === 'exam' && !questions.length) log('没提取到题：如果现在是「逐题」页面，点页面右上角的「整卷预览 / 答题卡」，在整卷页再点一次提取');
     if (kind === 'view') log('⚠ 这是查看/批改页，没有作答入口，填不进去；请回到作业作答页');
     if (pageFontEncrypted()) log('⚠ 页面用了字体加密（font-cxsecret），抓到的文字可能是错的，这次答案别信');
     if (await reportStructure()) log('结构已存到 cx-bridge/last-report.json（选择器校准用）');
