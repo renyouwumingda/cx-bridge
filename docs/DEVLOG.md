@@ -680,3 +680,10 @@ python sandbox_sim.py
   改法：`stats {tasks, skipped}` 在任务点开始时 +1、跳过测验类 +1；`statsTail()` 拼到「刷章节」状态行；`chapSave()` 在缺 `stats` 时从旧状态继承，避免中途保存把统计清掉。
 - 测试：e2e 加 `run_phase_f`（13 小时前的旧进度 → 只提示、不开跑）与「本次统计记了任务点」断言；e2e 共 19 项 PASS。
 - 踩坑：`handleTask(item, idx)` 没有 `state` 参数，直接在里面对 `state` 操作会 `ReferenceError`（页面流程整段卡住）→ 改成 `chapLoad()/chapSave()`。
+
+## 2026-11-08 v0.7.0 控制台：折叠 + 清空进度
+
+- 折叠：标题栏加 `–` 按钮，`#cxb-panel.mini` + 把 `#cxb-tabs`、三个 pane、日志区的 `style.display` 置 `none`；再点恢复。`×` 仍表示整块隐藏。
+- 清空进度：刷章节页签加「清空进度」，`chapSave({running:false, done:{}, chapterIdx:0, taskIdx:0, stats:{tasks:0,skipped:0}})` + 状态归零 + 日志。
+- 测试：e2e 加 `run_phase_g`（折叠后只剩标题栏、再点展开、清空进度生效）→ 共 22 项 PASS。
+- 踩坑：`$()` 只接受 id，不接受 `'#id'` 选择器（写成 `$('#cxb-tabs')` 返回 null，导致折叠无效），需要用 `qsa(sel)[0]`。

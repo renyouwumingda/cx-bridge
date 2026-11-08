@@ -157,6 +157,32 @@ def run_phase_f(browser, ok):
     ok.append(("旧进度不自动开跑", "小时前的" in log and "开始：章节列表页" not in log))
     ctx.close()
 
+def run_phase_g(browser, ok):
+    """控制台：折叠/展开 + 清空进度"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(FIX + "?mode=course&courseId=444&alldone=1")
+    page.evaluate("() => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(JSON.stringify({running:false, chapterIdx:2, done:{ch0:1}})))")
+    inject(page)
+    page.click('#cxb-min')
+    page.wait_for_timeout(300)
+    hidden = page.evaluate("() => getComputedStyle(document.querySelector('#cxb-tabs')).display === 'none' && document.querySelector('#cxb-panel').className.includes('mini')")
+    ok.append(("折叠后只留标题栏", hidden))
+    page.click('#cxb-min')
+    page.wait_for_timeout(300)
+    shown = page.evaluate("() => getComputedStyle(document.querySelector('#cxb-tabs')).display !== 'none' && getComputedStyle(document.querySelector('#cxb-tab-chapter')).display !== 'none'")
+    ok.append(("再点展开恢复", shown))
+    page.click('[data-tab=chapter]')
+    page.click('#cxb-chap-reset')
+    page.wait_for_timeout(400)
+    raw = page.evaluate("() => localStorage.getItem('gm:cxb_chapter_state')")
+    try:
+        st = json.loads(json.loads(raw)) if raw else {}
+    except Exception:
+        st = {}
+    ok.append(("清空进度生效", st.get("chapterIdx") == 0 and st.get("running") is False))
+    ctx.close()
+
 def run_phase_c(browser, ok):
     """视频 currentTime 不动：看门狗重试后跳过，不把流程卡死"""
     ctx = browser.new_context()
@@ -231,6 +257,7 @@ def main():
         run_phase_c(browser, ok)
         run_phase_e(browser, ok)
         run_phase_f(browser, ok)
+        run_phase_g(browser, ok)
         run_phase_d(browser, ok)
         run_phase_b(browser, ok)
         browser.close()

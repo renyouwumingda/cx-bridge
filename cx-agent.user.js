@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.9
+// @version      0.7.0
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.9'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.7.0'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1263,7 +1263,8 @@
       <strong style="font-size:13px">cx-bridge</strong>
       <span style="color:#8b5cf6;font-size:11px">v${VERSION}</span>
       <span id="cxb-state" style="color:#8a9199;font-size:12px">未连接</span>
-      <button id="cxb-hide" title="收起" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:#8a9199">×</button>
+      <button id="cxb-min" title="折叠/展开" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:#8a9199">–</button>
+      <button id="cxb-hide" title="隐藏面板（刷新回来）" style="border:0;background:none;cursor:pointer;font-size:15px;color:#8a9199">×</button>
     </div>
     <div id="cxb-tabs" style="display:flex;gap:4px;padding:8px 10px 0">
       <button data-tab="quiz" class="tab on">答题</button>
@@ -1288,6 +1289,7 @@
         <button id="cxb-chap-skip">跳过当前</button>
         <button id="cxb-chap-diag">诊断结构</button>
         <button id="cxb-chap-resume">继续上次</button>
+        <button id="cxb-chap-reset">清空进度</button>
       </div>
       <div id="cxb-chap-state" class="hint">在课程章节列表页或章节学习页点「开始刷章节」；只播视频、翻文档，不交测验/作业。</div>
       <div class="bar"><i id="cxb-chap-bar"></i></div>
@@ -1721,6 +1723,20 @@
       }
     }
   }, 2000);
+  $('cxb-min').onclick = () => {
+    const mini = panel.classList.toggle('mini');
+    ['#cxb-tabs', '#cxb-tab-quiz', '#cxb-tab-chapter', '#cxb-tab-info', '#cxb-log-wrap'].forEach(sel => {
+      const el = qsa(sel)[0]; if (el) el.style.display = mini ? 'none' : '';
+    });
+    $('cxb-min').textContent = mini ? '+' : '–';
+    $('cxb-min').title = mini ? '展开' : '折叠/展开';
+  };
+  $('cxb-chap-reset').onclick = () => {
+    chapSave({ running: false, done: {}, chapterIdx: 0, taskIdx: 0, stats: { tasks: 0, skipped: 0 } });
+    chapStatus('进度已清空', 0);
+    chapLog('章节进度已清空（下次从第 1 章开始）');
+    refreshChapStats();
+  };
   $('cxb-chap-stop').onclick = () => { chapRunning = false; const st = chapLoad(); st.running = false; chapSave(st); chapLog('你点了停止'); chapStatus('已停止'); };
   $('cxb-chap-skip').onclick = () => { chapSkip = true; chapLog('跳过当前任务点'); };
   $('cxb-chap-diag').onclick = () => withBusy(async () => { log('选择器命中：' + chapterDiagText()); await reportChapter(); });
