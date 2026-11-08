@@ -60,6 +60,14 @@ function study() {
     document.getElementById('iframe_content').appendChild(f);
     f.onload = () => {
       const v = f.contentDocument.getElementById('v');
+      if (p.get('stall') === '1') {
+        Object.defineProperty(v, 'duration', { get: () => 4 });
+        Object.defineProperty(v, 'currentTime', { get: () => 0 });
+        Object.defineProperty(v, 'paused', { get: () => false });
+        Object.defineProperty(v, 'ended', { get: () => false });
+        v.play = () => Promise.resolve();
+        return;
+      }
       const mock = makeVideo();
       Object.defineProperty(v, 'duration', { get: () => 4 });
       let t = 0;

@@ -92,6 +92,31 @@ def run_phase_a2(browser, ok):
         ok.append(("新版 h3 章节也能点进去", False))
     ctx.close()
 
+def run_phase_c(browser, ok):
+    """视频 currentTime 不动：看门狗重试后跳过，不把流程卡死"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.add_init_script("window.__CXB_STALL_WARN_MS = 1200; window.__CXB_STALL_SKIP_MS = 2600;")
+    page.goto(FIX + "?mode=study&ch=1&stall=1")
+    st = {"course": "/fixture_chapter.html", "running": True, "done": {}, "chapterIdx": 1, "taskIdx": 0}
+    page.evaluate("s => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(s))", json.dumps(st))
+    inject(page)
+    log, deadline = "", time.time() + 25
+    while time.time() < deadline:
+        try:
+            cur = page.evaluate("() => { const e = document.querySelector('#cxb-log'); return e ? e.textContent : ''; }")
+        except Exception:
+            break
+        if cur:
+            log = cur
+        if "跳过这个任务点" in log:
+            break
+        page.wait_for_timeout(200)
+    print("----- 卡住看门狗日志 -----")
+    print((log or "<empty>")[-500:])
+    ok.append(("视频卡住会自动跳过", "跳过这个任务点" in log))
+    ctx.close()
+
 def run_phase_b(browser, ok):
     ctx = browser.new_context()
     page = ctx.new_page()
@@ -132,6 +157,7 @@ def main():
         browser = pw.chromium.launch()
         run_phase_a(browser, ok)
         run_phase_a2(browser, ok)
+        run_phase_c(browser, ok)
         run_phase_b(browser, ok)
         browser.close()
 

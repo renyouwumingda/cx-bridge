@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.5
+// @version      0.6.6
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.5'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.6'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1033,6 +1033,10 @@
 
     const end = Date.now() + 45 * 60 * 1000;
     let lastLog = 0;
+    // 视频卡住（currentTime 不涨）的看门狗：先重试播放，长时间不动就跳过，别把整门课卡死
+    const stall = new Map();
+    const STALL_WARN = Number(window.__CXB_STALL_WARN_MS) || 25000;
+    const STALL_SKIP = Number(window.__CXB_STALL_SKIP_MS) || 90000;
     while (chapRunning && Date.now() < end) {
       const vids = findVideos().filter(({ v }) => !v.ended && isFinite(v.duration) && v.duration > 0);
       if (!vids.length) {
@@ -1062,6 +1066,21 @@
         } catch (e) {}
         const cur = v.currentTime || 0, dur = v.duration || 0;
         if (dur && cur >= dur - 2) continue;
+        const st = stall.get(v) || { cur: -1, at: Date.now(), warned: 0 };
+        if (Math.abs(cur - st.cur) > 0.4) { st.cur = cur; st.at = Date.now(); }
+        stall.set(v, st);
+        const stuck = Date.now() - st.at;
+        if (stuck > STALL_WARN && Date.now() - st.warned > 5000) {
+          st.warned = Date.now();
+          chapLog('视频卡住 ' + Math.round(stuck / 1000) + 's（时间不动），重试播放');
+          try {
+            const d = v.ownerDocument || document;
+            const btn = d.querySelector('.vjs-big-play-button, .xgplayer-start, .prism-big-play-btn, [class*="bigPlay"], [class*="play-btn"]');
+            if (btn) btn.click(); else v.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            await v.play().catch(() => {});
+          } catch (e) {}
+        }
+        if (stuck > STALL_SKIP) { chapLog('视频一直不动，跳过这个任务点'); return true; }
         allDone = false;
         if (Date.now() - lastLog > 5000) {
           lastLog = Date.now();

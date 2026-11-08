@@ -1,3 +1,10 @@
+## v0.6.6（2026-11-08）视频卡住看门狗
+
+- `handleTask` 里给每个 video 记 `{cur, at, warned}`：25s 内 `currentTime` 不动 → 日志「视频卡住 Ns（时间不动），重试播放」，再点一次播放按钮/调 `play()`；90s 仍不动 → 「视频一直不动，跳过这个任务点」直接返回，后续任务点/下一章继续。
+- 两个阈值可用 `window.__CXB_STALL_WARN_MS` / `__CXB_STALL_SKIP_MS` 覆盖（测试用，生产不设）。
+- fixture 增加 `?stall=1`（video 时间永远为 0）；e2e_chapter 增加阶段 C 断言，13 项全 PASS。
+- 全量回归（隔离 8796）：test_server 19、e2e_test、e2e_real、e2e_dowork 6/6、e2e_newstyle 2/2、sandbox_sim、e2e_idempotent 7 项全 PASS。
+
 ## v0.6.5（2026-11-08）诊断加同源 iframe / 继续上次 / 上次上报
 
 - `chapterDiag()` 增加 `docs`（同源文档数）、`videosInDocs`（含 iframe 内的 video）、`nextBtn`、`tasks`，上报内容能直接看出「任务点在不在 iframe 里」。
