@@ -74,6 +74,14 @@ function study() {
     return;
   }
   document.getElementById('cur_task1').onclick = () => {
+    if (p.get('xorigin') === '2') {
+      const fx = document.createElement('iframe');
+      fx.src = p.get('player') || 'http://localhost:8798/ananas/modules/video/index.html';
+      fx.style.cssText = 'width:300px;height:80px';
+      document.getElementById('iframe_content').innerHTML = '';
+      document.getElementById('iframe_content').appendChild(fx);
+      return;
+    }
     if (p.get('xorigin') === '1') {
       const fx = document.createElement('iframe');
       fx.src = 'http://127.0.0.1:9/player.html';

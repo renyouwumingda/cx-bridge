@@ -710,3 +710,24 @@ fixture 改成真实结构（`.posCatalog_select.firstLayer > .posCatalog_title`
 - 同源的情况照旧 `waitForVideo(12000)`，之后打印「iframe N 个，视频 N 个」。
 - 视频卡住时新增兜底：对 `video` 本体和 `#video / .videoArea / .vjs-tech` 派发一次 click。
 - fixture 加 `?xorigin=1`（iframe src 指向 `http://127.0.0.1:9/player.html`，必然跨域），e2e 加 `run_phase_i` → 25 项 PASS。
+
+## 2026-11-08 v0.7.1 按真实课程页校准
+
+- 真实页 diag（用户截图 + `/report`）：`.posCatalog_select=29`、`.posCatalog_name=21`、`[id^="cur"]=28`、`video=0`、`iframe=7`、`docs=10`、`videosInDocs=0`；章节行是 `div.posCatalog_select.firstLayer > span.posCatalog_title`，任务行是 `div.posCatalog_select > span.posCatalog_name`。
+- bug：`[id^=cur]` 把章节标题行也算成任务点（29 vs 真实 21）；播放器懒加载，1.2s 时还没有 video。
+- 改：`taskItems()` 只收「不含 `firstLayer` 且有 `.posCatalog_name`」的行；`collectDocs` 改真正 BFS（maxDepth 3）；新增 `waitForVideo(12000)`，点开后最多等 18s 再判文档；`chapterDiag` 加 `posCatalogTitle/posCatalogFirstLayer/iframeSrc`。
+- e2e 加 phase H（标题行排除、懒加载识别）→ 24 项。
+
+## 2026-11-08 v0.7.2 跨域播放器：先认域名
+
+- 点开任务点 0.8s 后算 iframe host，跨域且找不到 video → 打日志直接跳过（不再空等 12s/40s）。
+- 视频 `play()` 无效时补点 `#video / .videoArea / .vjs-tech` 和 `MouseEvent('click')`。
+- 参考九九助手发现它是伪造进度上报（`getEnc` + `/multimedia/log`），明确不抄。
+- e2e 加 phase I（`?xorigin=1` → 127.0.0.1:9）→ 25 项。
+
+## 2026-11-08 v0.7.3 播放器页整页播放
+
+- `PLAYER_PATH_RE = /\/ananas\/modules\/video\//`；`@match` 补 `*.chaoxing.com` 子域与 `ananas/modules/*`。
+- 跨域 iframe 是播放器页 → 记 `navBack`（当前学习页 URL）+ `videoDone[任务点] = 现在`，整页跳过去；播放器页 1.2s 后进 `playerMode()`：静音 2× 播，播完 `location.href = navBack`。
+- 回来后在任务循环里看到 `videoDone` 12 小时内的记录 → 跳过该任务点并标完成。
+- e2e 加 phase J：本地起 `127.0.0.1:8798/ananas/modules/video/index.html`（mock video），`add_init_script` 组合串保证每次导航都注入脚本，`wait_for_function` 等回跳 → 28 项全 PASS。

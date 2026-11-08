@@ -157,6 +157,51 @@ def run_phase_f(browser, ok):
     ok.append(("旧进度不自动开跑", "小时前的" in log and "开始：章节列表页" not in log))
     ctx.close()
 
+def run_phase_j(browser, ok):
+    """跨域播放器：整页跳到播放器页播完，再自动回课程页并把任务点算完成"""
+    import tempfile, http.server, threading, functools, os
+    from urllib.parse import quote
+    root = tempfile.mkdtemp(prefix="cxplayer")
+    d = os.path.join(root, "ananas", "modules", "video")
+    os.makedirs(d)
+    with open(os.path.join(d, "index.html"), "w", encoding="utf-8") as fh:
+        fh.write("""<!doctype html><meta charset=utf-8><body><video id=v></video><script>
+const v=document.getElementById('v');let t=0,rate=1,paused=true,ended=false;
+Object.defineProperty(v,'duration',{get:()=>3});
+Object.defineProperty(v,'currentTime',{get:()=>t,set:x=>{t=x}});
+Object.defineProperty(v,'paused',{get:()=>paused});
+Object.defineProperty(v,'ended',{get:()=>ended});
+Object.defineProperty(v,'playbackRate',{get:()=>rate,set:x=>{rate=x}});
+v.play=()=>{paused=false;clearInterval(v._i);v._i=setInterval(()=>{t+=0.5*rate;if(t>=3){t=3;ended=true;paused=true;clearInterval(v._i);}},200);return Promise.resolve();};
+v.pause=()=>{paused=true;clearInterval(v._i);};
+</script></body>""")
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 8798), functools.partial(http.server.SimpleHTTPRequestHandler, directory=root))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    # 每次导航都自动注入（跳播放器页时也要有脚本）
+    combo = ("(function(){var run=function(){" + STUB + chr(10) + US +
+             "};if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',run);}else{run();}})();")
+    page.add_init_script(combo)
+    player = quote("http://localhost:8798/ananas/modules/video/index.html")
+    page.goto(FIX + "?mode=study&courseId=111&chapterId=2&xorigin=2&player=" + player)
+    page.evaluate("() => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(JSON.stringify({running:true, chapterIdx:1, taskIdx:0})))")
+    page.click('[data-tab=chapter]')
+    page.click('#cxb-chap-start')
+    try:
+        page.wait_for_url("**/ananas/modules/video/index.html", timeout=20000)
+        ok.append(("跨域播放器整页跳转", True))
+        page.wait_for_function("() => location.href.includes('fixture_chapter.html')", timeout=30000)
+        ok.append(("播完自动回课程页", True))
+        page.wait_for_timeout(5000)
+        raw = page.evaluate("() => localStorage.getItem('gm:cxb_chapter_state')")
+        st = json.loads(json.loads(raw)) if raw else {}
+        ok.append(("回来的任务点算完成", st.get("taskIdx", 0) >= 1 or bool(st.get("done"))))
+    finally:
+        try: srv.shutdown()
+        except Exception: pass
+        ctx.close()
+
 def run_phase_i(browser, ok):
     """播放器在别的域里（跨域 iframe）：不干等，直接跳过并说明原因"""
     ctx = browser.new_context()
@@ -289,6 +334,7 @@ def main():
         run_phase_g(browser, ok)
         run_phase_h(browser, ok)
         run_phase_i(browser, ok)
+        run_phase_j(browser, ok)
         run_phase_d(browser, ok)
         run_phase_b(browser, ok)
         browser.close()

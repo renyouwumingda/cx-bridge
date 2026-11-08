@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.7.2
+// @version      0.7.3
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -10,12 +10,12 @@
 // @match        *://mooc1.chaoxing.com/mooc-ans/work/doHomeWorkNew*
 // @match        *://mooc1.chaoxing.com/mooc-ans/work/*
 // @match        http://127.0.0.1:8790/fixture*
-// @match        *://mooc1.chaoxing.com/mooc-ans/mycourse/*
-// @match        *://mooc1.chaoxing.com/mycourse/*
-// @match        *://mooc1.chaoxing.com/mooc2-ans/mycourse/*
-// @match        *://mooc1.chaoxing.com/knowledge/cards*
+// @match        *://*.chaoxing.com/mooc-ans/mycourse/*
+// @match        *://*.chaoxing.com/mycourse/*
+// @match        *://*.chaoxing.com/mooc2-ans/mycourse/*
+// @match        *://*.chaoxing.com/knowledge/cards*
 // @match        *://mooc1.chaoxing.com/mooc-ans/course/*
-// @match        *://mooc1.chaoxing.com/ananas/modules/*
+// @match        *://*.chaoxing.com/ananas/modules/*
 // @connect      127.0.0.1
 // @connect      localhost
 // @connect      p.ananas.chaoxing.com
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.7.2'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.7.3'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -899,6 +899,8 @@
   // 目标：在课程章节列表页点进未完成章节，在章节学习页里依次点任务点，
   // 视频静音 2 倍速播完、文档/PPT 停留计时，然后自动下一节。不交测验、不交作业。
   const CH_KEY = 'cxb_chapter_state';
+  // 真实学习通的视频模块页：播放器在别的域时可以整页跳过去播，播完再回来
+  const PLAYER_PATH_RE = /\/ananas\/modules\/video\//;
   let chapRunning = false;
   let chapSkip = false;
   let chapKeepGoing = false;   // 本次不是「跑完了」，而是要继续下一节/回列表，别把 running 清掉
@@ -1090,6 +1092,20 @@
     const foreign = [...new Set(ifrHosts.filter(h => h && h !== 'srcdoc' && h !== location.host))];
     if (!findVideos().length && foreign.length) {
       chapLog('点开后：iframe ' + ifrHosts.length + ' 个（跨域：' + foreign.slice(0, 3).join(',') + '），视频 0 个');
+      const fr = qsa('iframe').find(f => {
+        try { const u = new URL(f.src); return foreign.indexOf(u.host) >= 0 && PLAYER_PATH_RE.test(u.pathname); } catch (e) { return false; }
+      });
+      if (fr) {
+        const st0 = chapLoad();
+        st0.navBack = location.href;
+        st0.videoDone = st0.videoDone || {};
+        st0.videoDone[item.name] = Date.now();
+        st0.running = true;
+        chapSave(st0);
+        chapLog('播放器在别的域，整页转到播放器页播完再回来：' + String(fr.src).slice(0, 140));
+        location.href = fr.src;
+        return true;
+      }
       chapLog('播放器在别的域里，脚本够不到它的 video，跳过这个任务点（把这条日志发给作者可适配）');
       return true;
     }
@@ -1180,6 +1196,16 @@
     for (; i < tasks.length; i++) {
       if (!chapRunning) return false;
       if (state.done[doneKey + i]) continue;
+      // 刚才整页跳到播放器页播过的任务点：回来直接算完成，别再点一遍
+      const vd = (state.videoDone || {})[tasks[i].name];
+      if (vd && Date.now() - vd < 12 * 3600 * 1000) {
+        delete state.videoDone[tasks[i].name];
+        chapLog('刚在播放器页播过，跳过：' + tasks[i].name);
+        state.done[doneKey + i] = 1;
+        state.taskIdx = i + 1;
+        chapSave(state);
+        continue;
+      }
       const ok = await handleTask(tasks[i], i);
       if (ok && chapRunning) {
         state.done[doneKey + i] = 1;
@@ -1254,6 +1280,40 @@
       });
       log('章节结构已上报（' + cands.length + ' 个候选）');
     } catch (e) { log('章节结构上报失败：' + (e.message || e)); }
+  }
+
+  // 站在播放器页（顶层）时：直接播，播完回课程页。真实页跨域播放器就走这条路。
+  async function playerMode() {
+    chapLog('播放器页：开始播放（2 倍速），播完自动回课程页');
+    const end = Date.now() + 6 * 3600 * 1000;
+    let lastLog = 0;
+    while (Date.now() < end) {
+      const vids = qsa('video');
+      if (vids.length) {
+        let allDone = true;
+        for (const v of vids) {
+          try {
+            v.muted = true;
+            if (v.playbackRate < 2) v.playbackRate = 2;
+            if (v.paused && !v.ended) await v.play().catch(() => {});
+          } catch (e) {}
+          const dur = v.duration || 0, cur = v.currentTime || 0;
+          if (v.ended || (dur && cur >= dur - 2)) continue;
+          allDone = false;
+          if (Date.now() - lastLog > 5000) {
+            lastLog = Date.now();
+            const pct = dur ? Math.round(cur / dur * 100) : 0;
+            chapLog('播放中 ' + pct + '%（' + Math.round(cur) + '/' + Math.round(dur) + 's）');
+          }
+        }
+        if (allDone) break;
+      }
+      await sleep(1500);
+    }
+    const st = chapLoad() || {};
+    chapLog('播放器页：播完了，回课程页');
+    if (st.navBack) location.href = st.navBack;
+    else if (history.length > 1) history.back();
   }
 
   async function chapterRun() {
@@ -1761,6 +1821,10 @@
   $('cxb-solve').onclick = () => withBusy(() => doSolve());
   $('cxb-fill').onclick = () => withBusy(() => doFill());
   $('cxb-chap-start').onclick = () => withBusy(chapterRun);
+  // 播放器页（跨域播放时整页跳过来的）——只播，不参与章节流程
+  if (PLAYER_PATH_RE.test(location.pathname)) {
+    setTimeout(() => withBusy(playerMode), 1200);
+  }
   // 点进章节会整页跳转，脚本重载后自动接着刷（状态存在 GM 里）
   setTimeout(() => {
     if (!chapRunning && (chapKind() === 'study' || chapKind() === 'course')) {
