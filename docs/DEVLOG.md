@@ -1,3 +1,10 @@
+## v0.6.5（2026-11-08）诊断加同源 iframe / 继续上次 / 上次上报
+
+- `chapterDiag()` 增加 `docs`（同源文档数）、`videosInDocs`（含 iframe 内的 video）、`nextBtn`、`tasks`，上报内容能直接看出「任务点在不在 iframe 里」。
+- `GET /report`：服务端返回最近一次结构上报的摘要（url/at/kind/count/diag/fontEncrypted/formula），没有则 `{"ok":false,"reason":"还没有结构上报"}`。
+- 概览页新增「上次上报」一行；章节页新增「继续上次」按钮（读 GM 里的进度直接续跑，不要求上次仍在运行）。
+- 回归（隔离 8795 + 生产 8790 重启）：e2e_chapter 12 项、e2e_test、e2e_real、e2e_dowork 6/6、e2e_newstyle 2/2、sandbox_sim、e2e_idempotent 7 项、test_server 19 项全 PASS；`GET /report` 实测 before/after 正常。
+
 ## v0.6.4（2026-11-08）刷章节只刷视频/文档，播放器兜底
 
 - 任务点名字命中 `测验|作业|考试|讨论|投票|问卷|互评|章节检测|签到` 时直接跳过并记日志——这类任务点只点开不交也会产生「已开始」记录，宁可不动。

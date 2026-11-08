@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.4
+// @version      0.6.5
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.4'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.5'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1125,6 +1125,15 @@
      '.menulist-menu-title', '#prevNextFocusList li', '[id^="cur"]', 'video', 'iframe'].forEach(sel => {
       try { counts[sel] = qsa(sel).length; } catch (e) { counts[sel] = -1; }
     });
+    // 同源 iframe 里也数一遍（学习页的任务点/播放器常在 #iframe_content 内）
+    let docs = 0, vids = 0;
+    try {
+      sameOriginDocs().forEach(d => { docs++; try { vids += qsa('video', d).length; } catch (e) {} });
+    } catch (e) {}
+    counts.docs = docs;
+    counts.videosInDocs = vids;
+    counts.nextBtn = qsa('#prevNextFocusNext, a[onclick*=getTeacherAjax], .nextChapter').length;
+    counts.tasks = taskItems().length;
     return counts;
   }
   function chapterDiagText() {
@@ -1226,6 +1235,7 @@
         <button id="cxb-chap-stop">停止</button>
         <button id="cxb-chap-skip">跳过当前</button>
         <button id="cxb-chap-diag">诊断结构</button>
+        <button id="cxb-chap-resume">继续上次</button>
       </div>
       <div id="cxb-chap-state" class="hint">在课程章节列表页或章节学习页点「开始刷章节」；只播视频、翻文档，不交测验/作业。</div>
       <div class="bar"><i id="cxb-chap-bar"></i></div>
@@ -1237,6 +1247,7 @@
       <div class="kv"><span>本次任务</span><b id="cxb-i-task">-</b></div>
       <div class="kv"><span>题目/已答</span><b id="cxb-i-count">-</b></div>
       <div class="kv"><span>刷章节</span><b id="cxb-i-chap">-</b></div>
+      <div class="kv"><span>上次上报</span><b id="cxb-i-report">-</b></div>
       <div class="row"><button id="cxb-info-refresh">刷新状态</button><button id="cxb-open-logs">服务日志</button></div>
     </div>
     <div id="cxb-log-wrap">
@@ -1281,6 +1292,7 @@
   const infoVals = {
     engine: $('cxb-i-engine'), model: $('cxb-i-model'), data: $('cxb-i-data'),
     task: $('cxb-i-task'), count: $('cxb-i-count'), chap: $('cxb-i-chap'),
+    report: $('cxb-i-report'),
   };
   function setInfo(k, v) { const el = infoVals[k]; if (el) el.textContent = v == null || v === '' ? '-' : String(v); }
   async function refreshInfo() {
@@ -1300,6 +1312,13 @@
     } catch (e) {}
     refreshQuizStats();
     refreshChapStats();
+    try {
+      const r = await getJSON('/report');
+      if (r && r.ok) {
+        const at = (r.at || '').replace('T', ' ').slice(5, 16);
+        setInfo('report', (r.kind || '?') + ' · ' + (r.count || 0) + ' 个 · ' + at);
+      } else setInfo('report', '还没有');
+    } catch (e) { setInfo('report', '-'); }
   }
   function refreshChapStats() {
     try {
@@ -1632,6 +1651,13 @@
   $('cxb-chap-stop').onclick = () => { chapRunning = false; const st = chapLoad(); st.running = false; chapSave(st); chapLog('你点了停止'); chapStatus('已停止'); };
   $('cxb-chap-skip').onclick = () => { chapSkip = true; chapLog('跳过当前任务点'); };
   $('cxb-chap-diag').onclick = () => withBusy(async () => { log('选择器命中：' + chapterDiagText()); await reportChapter(); });
+  $('cxb-chap-resume').onclick = () => withBusy(async () => {
+    const st = chapLoad();
+    if (!st.chapterIdx && st.chapterIdx !== 0) { log('没有上次进度，直接点「开始刷章节」'); return; }
+    st.running = true; chapSave(st);
+    log('继续上次进度：第 ' + ((st.chapterIdx || 0) + 1) + ' 章');
+    await chapterRun();
+  });
 
 
   // 打开页面就自动上报一次结构：这样我不需要你点任何按钮，刷新一下我就能拿到真实标记。

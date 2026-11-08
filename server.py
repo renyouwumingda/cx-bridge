@@ -472,6 +472,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, text, "text/plain; charset=utf-8")
         if path == "/answers":
             return self._send(200, json.dumps(read_answers(), ensure_ascii=False))
+        if path == "/report":
+            data = _load(REPORT) or {}
+            if not data:
+                return self._send(200, json.dumps({"ok": False, "reason": "还没有结构上报"}, ensure_ascii=False))
+            return self._send(200, json.dumps({
+                "ok": True, "url": data.get("url"), "at": data.get("at") or data.get("received"),
+                "kind": data.get("kind"), "count": data.get("count"),
+                "diag": data.get("diag"), "fontEncrypted": data.get("fontEncrypted"),
+                "formula": data.get("formula"),
+            }, ensure_ascii=False))
         if path == "/fill-report":
             data = _load(os.path.join(DATA_DIR, "fill-report.json")) or {"ok": False, "reason": "还没有回填结果"}
             return self._send(200, json.dumps(data, ensure_ascii=False))
