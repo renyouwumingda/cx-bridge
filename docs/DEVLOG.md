@@ -700,3 +700,13 @@ python sandbox_sim.py
 
 诊断字段新增 `.posCatalog_title` / `.posCatalog_select.firstLayer` / `iframeSrc`（前 6 个 iframe 的 host 或 `srcdoc`），下次真 diag 能直接看出播放器在哪个域。
 fixture 改成真实结构（`.posCatalog_select.firstLayer > .posCatalog_title` + 两个任务行 + iframe 延迟 900ms 挂载），e2e 加 `run_phase_h` → 24 项 PASS。
+
+## 2026-11-08 v0.7.2 跨域播放器不干等
+
+真实学习通的播放器常挂在 `#iframe_content` 下的另一个域（`mooc1-1.chaoxing.com` / `ananas/modules/video`）。这种 iframe 的 `contentDocument` 为 null，`<video>` 永远抓不到，旧逻辑会把它当文档空转 20–40 秒。
+
+- 点开任务点后先算一次 iframe 域名：`new URL(f.src).host` 与 `location.host` 比对，取跨域集合。
+- 没有 `video` 且存在跨域 iframe → 打两行日志（iframe 数量/跨域域名、跳过原因）并立刻 `return true`，不等待。
+- 同源的情况照旧 `waitForVideo(12000)`，之后打印「iframe N 个，视频 N 个」。
+- 视频卡住时新增兜底：对 `video` 本体和 `#video / .videoArea / .vjs-tech` 派发一次 click。
+- fixture 加 `?xorigin=1`（iframe src 指向 `http://127.0.0.1:9/player.html`，必然跨域），e2e 加 `run_phase_i` → 25 项 PASS。

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.7.1
+// @version      0.7.2
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.7.1'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.7.2'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1082,9 +1082,20 @@
     chapLog('任务点 ' + (idx + 1) + '：' + item.name);
     try { item.el.click(); } catch (e) { chapLog('点不动这个任务点：' + (e.message || e)); }
     await sleep(800);
-    // 等播放器加载（最多 12 秒）；真实页靠这段才抓得到 iframe 里的 video
     const clickAt = Date.now();
+    // 点开后的内容区诊断：真实页播放器可能在不同域（mooc1-1 / ananas），跨域就永远够不到 video，别干等
+    const ifrHosts = qsa('iframe').map(f => {
+      try { return new URL(f.src || 'about:blank').host || 'srcdoc'; } catch (e) { return '?'; }
+    });
+    const foreign = [...new Set(ifrHosts.filter(h => h && h !== 'srcdoc' && h !== location.host))];
+    if (!findVideos().length && foreign.length) {
+      chapLog('点开后：iframe ' + ifrHosts.length + ' 个（跨域：' + foreign.slice(0, 3).join(',') + '），视频 0 个');
+      chapLog('播放器在别的域里，脚本够不到它的 video，跳过这个任务点（把这条日志发给作者可适配）');
+      return true;
+    }
+    // 等播放器加载（最多 12 秒）；真实页靠这段才抓得到 iframe 里的 video
     await waitForVideo(12000);
+    chapLog('点开后：iframe ' + ifrHosts.length + ' 个，视频 ' + findVideos().length + ' 个');
 
     const end = Date.now() + 45 * 60 * 1000;
     try { const s0 = chapLoad(); s0.stats = s0.stats || { tasks: 0, skipped: 0 }; s0.stats.tasks += 1; chapSave(s0); } catch (e) {}
@@ -1138,6 +1149,15 @@
           } catch (e) {}
         }
         if (stuck > STALL_SKIP) { chapLog('视频一直不动，跳过这个任务点'); return true; }
+        // 有些播放器靠点击视频本体才真正开始
+        if (stuck > 6000 && Date.now() - st.warned > 5000) {
+          try {
+            v.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            const d = v.ownerDocument || document;
+            const box = d.querySelector('#video, .videoArea, .vjs-tech');
+            if (box) box.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          } catch (e) {}
+        }
         allDone = false;
         if (Date.now() - lastLog > 5000) {
           lastLog = Date.now();

@@ -157,6 +157,20 @@ def run_phase_f(browser, ok):
     ok.append(("旧进度不自动开跑", "小时前的" in log and "开始：章节列表页" not in log))
     ctx.close()
 
+def run_phase_i(browser, ok):
+    """播放器在别的域里（跨域 iframe）：不干等，直接跳过并说明原因"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(FIX + "?mode=study&courseId=111&chapterId=2&xorigin=1")
+    page.evaluate("() => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(JSON.stringify({running:true, chapterIdx:1, taskIdx:0})))")
+    inject(page)
+    page.click('[data-tab=chapter]')
+    page.click('#cxb-chap-start')
+    page.wait_for_timeout(4000)
+    txt = page.evaluate("() => (document.querySelector('#cxb-log') || {}).textContent || ''")
+    ok.append(("跨域播放器直接跳过", ('别的域' in txt) and ('127.0.0.1:9' in txt)))
+    ctx.close()
+
 def run_phase_h(browser, ok):
     """真实学习通目录结构：章节标题行不算任务点；懒加载的播放器也能认出来"""
     ctx = browser.new_context()
@@ -274,6 +288,7 @@ def main():
         run_phase_f(browser, ok)
         run_phase_g(browser, ok)
         run_phase_h(browser, ok)
+        run_phase_i(browser, ok)
         run_phase_d(browser, ok)
         run_phase_b(browser, ok)
         browser.close()
