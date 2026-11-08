@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.7.0
+// @version      0.7.1
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.7.0'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.7.1'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -972,13 +972,25 @@
     return out;
   }
 
-  // 章节学习页：任务点。真实页面至少有三种写法（旧版/新版/学校自建），都收进来。
+  // 章节学习页：任务点。真实学习通目录是：
+  //   章节行 .posCatalog_select.firstLayer > .posCatalog_title（不是任务点，点了没用）
+  //   任务行 .posCatalog_select > .posCatalog_name（点了会 getTeacherAjax 载入内容）
   function taskItems() {
-    const sels = [
-      '.posCatalog_select', '.posCatalog_name', '.menulist-menu-title',
-      '#prevNextFocusList li', '.catalog_points li',
-      '[id^="cur"]', '[id*="cur"]',
-    ];
+    const cat = qsa('.posCatalog_select').filter(el =>
+      !el.classList.contains('firstLayer') && el.querySelector('.posCatalog_name'));
+    if (cat.length) {
+      const seen = new Set(), out = [];
+      cat.forEach(row => {
+        const nm = row.querySelector('.posCatalog_name');
+        const t = norm(nm) || norm(row);
+        const key = (row.id || '') + '|' + t.slice(0, 30);
+        if (!t || seen.has(key)) return;
+        seen.add(key);
+        out.push({ el: nm, row, name: t.slice(0, 40), id: row.id || '' });
+      });
+      return out.slice(0, 300);
+    }
+    const sels = ['.posCatalog_name', '.menulist-menu-title', '#prevNextFocusList li', '.catalog_points li', '[id^="cur"]', '[id*="cur"]'];
     const out = [], seen = new Set();
     sels.forEach(sel => {
       let list = [];
@@ -995,24 +1007,28 @@
     return out.slice(0, 300);
   }
 
-  // 递归收集同源文档（任务内容常常在 #iframe_content 里再嵌一层播放器）
+  // 递归收集同源文档（任务内容常在 #iframe_content 里再嵌一层播放器，真实页要 2~3 层）
   function collectDocs(rootDoc, depth) {
     const docs = [rootDoc || document];
-    const d0 = depth == null ? 2 : depth;
-    for (let i = 0; i < docs.length && i < 40; i++) {
-      if (d0 <= 0) break;
-      let frames = [];
-      try { frames = qsa('iframe', docs[i]); } catch (e) { frames = []; }
-      frames.forEach(f => {
-        try {
-          const d = f.contentDocument;
-          if (d && d.body && docs.indexOf(d) < 0) docs.push(d);
-        } catch (e) { /* 跨域 */ }
+    let level = [docs[0]];
+    const maxDepth = depth == null ? 3 : depth;
+    for (let d = 0; d < maxDepth && level.length; d++) {
+      const next = [];
+      level.forEach(doc => {
+        let frames = [];
+        try { frames = qsa('iframe', doc); } catch (e) { frames = []; }
+        frames.forEach(f => {
+          try {
+            const cd = f.contentDocument;
+            if (cd && cd.body && docs.indexOf(cd) < 0) { docs.push(cd); next.push(cd); }
+          } catch (e) { /* 跨域 */ }
+        });
       });
+      level = next;
     }
     return docs;
   }
-  function sameOriginDocs() { return collectDocs(document, 2); }
+  function sameOriginDocs() { return collectDocs(document, 3); }
 
   function findVideos() {
     const out = [];
@@ -1036,6 +1052,16 @@
     });
     return out;
   }
+  // 真实页播放器是懒加载的：点开任务点后 iframe 要几百毫秒才把 video 挂上来
+  async function waitForVideo(ms) {
+    const end = Date.now() + (ms || 8000);
+    while (Date.now() < end) {
+      if (findVideos().length) return true;
+      await sleep(400);
+    }
+    return findVideos().length > 0;
+  }
+
   // 任务点是否已显示「已完成」
   function taskDone(el) {
     return !!el.querySelector('.icon.blue, [class*="complete"], [class*="finish"]') || /已完成/.test(norm(el));
@@ -1055,7 +1081,10 @@
     }
     chapLog('任务点 ' + (idx + 1) + '：' + item.name);
     try { item.el.click(); } catch (e) { chapLog('点不动这个任务点：' + (e.message || e)); }
-    await sleep(2500);
+    await sleep(800);
+    // 等播放器加载（最多 12 秒）；真实页靠这段才抓得到 iframe 里的 video
+    const clickAt = Date.now();
+    await waitForVideo(12000);
 
     const end = Date.now() + 45 * 60 * 1000;
     try { const s0 = chapLoad(); s0.stats = s0.stats || { tasks: 0, skipped: 0 }; s0.stats.tasks += 1; chapSave(s0); } catch (e) {}
@@ -1067,6 +1096,7 @@
     while (chapRunning && Date.now() < end) {
       const vids = findVideos().filter(({ v }) => !v.ended && isFinite(v.duration) && v.duration > 0);
       if (!vids.length) {
+        if (Date.now() - clickAt < 18000) { await sleep(1000); continue; }
         // 文档 / PPT 页面：停留 20–40 秒算过
         const wait = rnd(20000, 40000);
         chapLog('没有视频，按文档处理，停留 ' + Math.round(wait / 1000) + ' 秒');
@@ -1179,6 +1209,11 @@
     counts.docs = docs;
     counts.videosInDocs = vids;
     counts.nextBtn = qsa('#prevNextFocusNext, a[onclick*=getTeacherAjax], .nextChapter').length;
+    counts.posCatalogTitle = qsa('.posCatalog_title').length;
+    counts.posCatalogFirstLayer = qsa('.posCatalog_select.firstLayer').length;
+    counts.iframeSrc = qsa('iframe').slice(0, 6).map(f => {
+      try { return new URL(f.src || 'about:blank').host || 'srcdoc'; } catch (e) { return '?'; }
+    }).join(',');
     counts.tasks = taskItems().length;
     return counts;
   }

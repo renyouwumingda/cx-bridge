@@ -687,3 +687,16 @@ python sandbox_sim.py
 - 清空进度：刷章节页签加「清空进度」，`chapSave({running:false, done:{}, chapterIdx:0, taskIdx:0, stats:{tasks:0,skipped:0}})` + 状态归零 + 日志。
 - 测试：e2e 加 `run_phase_g`（折叠后只剩标题栏、再点展开、清空进度生效）→ 共 22 项 PASS。
 - 踩坑：`$()` 只接受 id，不接受 `'#id'` 选择器（写成 `$('#cxb-tabs')` 返回 null，导致折叠无效），需要用 `qsa(sel)[0]`。
+
+## 2026-11-08 v0.7.1 按真实课程页校准（第一次拿到真 diag）
+
+真实页 `mycourse/studentstudy?chapterId=881199640…` 的 diag：
+`.chapter_item=0 .chapter_unit a=0 h3 a=2 .posCatalog_select=29 .posCatalog_name=21 [id^=cur]=28 video=0 iframe=7 docs=10 videosInDocs=0 nextBtn=3 tasks=29`
+
+三个问题与修法：
+- **任务点混进章节标题**：`[id^=cur]` 同时命中标题行；diag tasks=29 但真实任务点只有 21（`.posCatalog_name=21`）。现在优先 `.posCatalog_select:not(.firstLayer)` 且必须有 `.posCatalog_name`。
+- **视频永远找不到**：日志「没有视频，按文档处理，停留 39 秒」×N。真实页播放器懒加载，1.2s 时 video=0，稍后 videosInDocs=1。现在点开任务点后 `waitForVideo(12000)`，18 秒内没找到才走文档分支。
+- **iframe 层数**：`collectDocs` 改成真正的按层 BFS（depth=3），原来 `d0` 递减逻辑写错、等于不限层但有 40 个上限。
+
+诊断字段新增 `.posCatalog_title` / `.posCatalog_select.firstLayer` / `iframeSrc`（前 6 个 iframe 的 host 或 `srcdoc`），下次真 diag 能直接看出播放器在哪个域。
+fixture 改成真实结构（`.posCatalog_select.firstLayer > .posCatalog_title` + 两个任务行 + iframe 延迟 900ms 挂载），e2e 加 `run_phase_h` → 24 项 PASS。
