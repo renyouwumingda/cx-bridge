@@ -5,11 +5,13 @@
   "description": "学习通作业 AI 答题桥：把本地 cx-bridge MCP 服务接进 DSH，浏览器脚本负责提取与回填，模型负责作答，不自动提交。",
   "license": "MIT",
   "exports": {
+    ".": "./index.js",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
   "files": [
+    "index.js",
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
