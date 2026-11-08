@@ -664,3 +664,10 @@ python sandbox_sim.py
 - 现象：脚本猫里那份进度是全局的，A 课刷到第 3 章、换 B 课打开时会从「第 3 章」开始，跳过 B 课的前两章。
 - 改法：`chapterRun()` 里比较 `state.course` 与当前 `chapCourseKey()`（`courseId/clazzId`），不一致就把 `chapterIdx/taskIdx/done` 清零并提示「换了课程（旧 → 新），进度从头开始」，再写回新 key。
 - 测试：fixture 加 `&alldone=1`（所有章节标记已完成，流程停在列表页、日志可读）；`e2e_chapter.py` 加 `run_phase_d`，预置一份别的课程的旧进度，断言重置提示 + `chapterIdx` 归零；e2e 共 15 项 PASS。
+
+## 2026-11-08 v0.6.8 刷章节：音频任务点
+
+- 现象：音频类任务点（`.audioReader`）页面没有 `<video>`，旧逻辑按「文档」处理，只停留 20–40 秒，不计播放时长。
+- 改法：`findVideos()` 同时收 `video, audio`；对 `.audioReader` 里只有 `<source>` 的情况，补建一个 `<audio src=...>` 再播放。播放逻辑（静音、2 倍速、卡住看门狗、播完判定）不变。
+- 测试：fixture 加 `&audio=1`（点击任务点生成 `.audioReader > audio`，duration/currentTime/play 全 mock）；`e2e_chapter.py` 加 `run_phase_e`，断言音频被当媒体播放（不是「按文档处理」）、2 倍速、静音；e2e 共 17 项 PASS。
+- 备注：e2e 里预置 GM 状态必须**双重 JSON 编码**（`JSON.stringify(JSON.stringify(obj))`），因为 STUB 的 `GM_setValue` 会再 stringify 一次；单层编码会让 `chapLoad()` 解析失败、自动继续不触发。

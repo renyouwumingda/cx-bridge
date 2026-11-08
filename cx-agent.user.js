@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.7
+// @version      0.6.8
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.7'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.8'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1007,7 +1007,22 @@
   function findVideos() {
     const out = [];
     sameOriginDocs().forEach(d => {
-      try { qsa('video', d).forEach(v => out.push({ v, d })); } catch (e) {}
+      try {
+        // 视频和音频任务点都要算：音频也能播放计时
+        qsa('video, audio', d).forEach(v => out.push({ v, d }));
+        // 学习通的音频任务点常是 .audioReader 里只放 <source>，没有现成 <audio>，补一个
+        qsa('.audioReader', d).forEach(box => {
+          if (box.querySelector('audio')) return;
+          const s = box.querySelector('source');
+          const src = (s && (s.getAttribute('src') || s.src)) || box.getAttribute('data-src') || box.getAttribute('src');
+          if (!src) return;
+          const a = d.createElement('audio');
+          a.src = src;
+          a.preload = 'auto';
+          box.appendChild(a);
+          out.push({ v: a, d });
+        });
+      } catch (e) {}
     });
     return out;
   }
@@ -1040,7 +1055,7 @@
     while (chapRunning && Date.now() < end) {
       const vids = findVideos().filter(({ v }) => !v.ended && isFinite(v.duration) && v.duration > 0);
       if (!vids.length) {
-        // 文档 / PPT / 音频之外的页面：停留 20–40 秒算过
+        // 文档 / PPT 页面：停留 20–40 秒算过
         const wait = rnd(20000, 40000);
         chapLog('没有视频，按文档处理，停留 ' + Math.round(wait / 1000) + ' 秒');
         const t0 = Date.now();

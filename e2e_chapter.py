@@ -115,6 +115,27 @@ def run_phase_d(browser, ok):
     ok.append(("换课程后进度归零", st.get("chapterIdx") == 0))
     ctx.close()
 
+def run_phase_e(browser, ok):
+    """音频任务点：应被当成媒体播放（2 倍速、播完），而不是干等 20–40 秒"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(FIX + "?mode=study&ch=1&audio=1")
+    page.evaluate("() => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(JSON.stringify({running:true, chapterIdx:1, taskIdx:0, done:{}})))")
+    inject(page)
+    log, deadline = "", time.time() + 25
+    while time.time() < deadline:
+        cur = page.evaluate("() => { const e = document.querySelector('#cxb-log'); return e ? e.textContent : ''; }")
+        if cur:
+            log = cur
+        if "播完" in log or "按文档处理" in log:
+            break
+        page.wait_for_timeout(200)
+    info = page.evaluate("() => { const a = document.querySelector('#a1'); return a ? {rate: a.playbackRate, muted: a.muted, ended: a.ended} : null; }")
+    print("----- 音频任务点 -----", info)
+    ok.append(("音频按媒体播放（走进度）", bool(info) and "播完" in log and "按文档处理" not in log))
+    ok.append(("音频 2 倍速且静音", bool(info) and info.get("rate") == 2 and info.get("muted") is True))
+    ctx.close()
+
 def run_phase_c(browser, ok):
     """视频 currentTime 不动：看门狗重试后跳过，不把流程卡死"""
     ctx = browser.new_context()
@@ -181,6 +202,7 @@ def main():
         run_phase_a(browser, ok)
         run_phase_a2(browser, ok)
         run_phase_c(browser, ok)
+        run_phase_e(browser, ok)
         run_phase_d(browser, ok)
         run_phase_b(browser, ok)
         browser.close()

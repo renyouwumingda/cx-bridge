@@ -52,7 +52,26 @@ function study() {
   app.innerHTML = '<h3>第2章 稳恒磁场</h3>' +
     '<div class="posCatalog_name" id="cur_task1">2.1 磁场视频（40 min）</div>' +
     '<div class="posCatalog_name" id="cur_task2">2.2 章节测验（10 题）</div>' +
-    '<div id="iframe_content"></div>';
+    '<div id="iframe_content"></div><div id="task-area"></div>';
+  if (p.get('audio') === '1') {
+    document.getElementById('cur_task1').onclick = () => {
+      const box = document.createElement('div');
+      box.className = 'audioReader';
+      const a = document.createElement('audio');
+      a.id = 'a1';
+      box.appendChild(a);
+      document.getElementById('task-area').appendChild(box);
+      let cur = 0, ended = false, rate = 1, paused = true;
+      Object.defineProperty(a, 'duration', { get: () => 4 });
+      Object.defineProperty(a, 'currentTime', { get: () => cur });
+      Object.defineProperty(a, 'ended', { get: () => ended });
+      Object.defineProperty(a, 'paused', { get: () => paused });
+      Object.defineProperty(a, 'playbackRate', { get: () => rate, set: v => { rate = v; } });
+      a.play = () => { paused = false; clearInterval(a._t); a._t = setInterval(() => { cur += 0.2 * rate; if (cur >= 3) { cur = 3; ended = true; paused = true; clearInterval(a._t); } }, 200); return Promise.resolve(); };
+      a.pause = () => { paused = true; clearInterval(a._t); };
+    };
+    return;
+  }
   document.getElementById('cur_task1').onclick = () => {
     const f = document.createElement('iframe');
     f.style.cssText = 'width:300px;height:80px';
