@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.5.1
+// @version      0.5.3
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -21,7 +21,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.5.1'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.5.3'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1065,8 +1065,21 @@
             return false;
           }
           deadChecks++;
+          // 会话退出后答案可能刚好才落盘：再耐心查几轮 /answers 才认定失败
           if (deadChecks >= 2) {
-            log('做题会话已退出，也没写答案。看 http://127.0.0.1:8790/logs 排查；可以直接点「开始做题」重试。');
+            try {
+              const a2 = await getJSON('/answers');
+              if (a2 && a2.ready && a2.answers) {
+                answers = a2.answers;
+                const ok2 = showAnswers();
+                log('已作答 ' + ok2 + '/' + Object.keys(answers).length);
+                setState('已作答 ' + ok2 + '/' + Object.keys(answers).length, '#1a7f37');
+                return true;
+              }
+            } catch (e) { /* ignore */ }
+          }
+          if (deadChecks >= 5) {
+            log('做题会话已退出，没等到答案。看 http://127.0.0.1:8790/logs 排查；可以点「回填」用已有答案，或点「开始做题」重试（已答的题会复用）。');
             setState('做题会话退出', '#c0392b');
             return false;
           }
@@ -1149,7 +1162,18 @@
   }
 
   async function doFill() {
-    if (!Object.keys(answers).length) { log('先点「作答」'); return; }
+    // 页面可能因为刷新/等待超时没把答案留在内存里：先从服务端取一次
+    if (!Object.keys(answers).length) {
+      try {
+        const a = await getJSON('/answers');
+        if (a && a.ready && a.answers) {
+          answers = a.answers;
+          LAST_TASK = a.task_id || LAST_TASK;
+          log('已从服务端取到 ' + Object.keys(answers).length + ' 条答案');
+        }
+      } catch (e) { /* 服务没起就算了 */ }
+    }
+    if (!Object.keys(answers).length) { log('还没有答案：先点「开始做题」，或在会话里说「作答」'); return; }
     log('开始回填（不会提交，请自行核对后手动提交）…');
     const r = await fillAll();
     log('回填完成：' + r.okCount + '/' + r.total);
