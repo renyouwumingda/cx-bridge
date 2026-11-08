@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.1
+// @version      0.6.2
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.1'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.2'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -901,6 +901,7 @@
   const CH_KEY = 'cxb_chapter_state';
   let chapRunning = false;
   let chapSkip = false;
+  let chapKeepGoing = false;   // 本次不是「跑完了」，而是要继续下一节/回列表，别把 running 清掉
 
   const qsa = (sel, root) => Array.from((root || document).querySelectorAll(sel));
   const norm = el => (el ? (el.textContent || '').replace(/\s+/g, ' ').trim() : '');
@@ -1077,7 +1078,10 @@
       if (items[idx].done) continue;
       chapLog('打开章节 ' + (idx + 1) + '/' + items.length + '：' + items[idx].name);
       state.chapterIdx = idx; state.taskIdx = 0; state.chapterId = String(idx);
+      state.listUrl = location.href;
+      state.totalChapters = items.length;
       chapSave(state);
+      chapStatus('第 ' + (idx + 1) + ' / ' + items.length + ' 章：' + items[idx].name, ((idx + 1) / items.length) * 100);
       items[idx].el.click();
       await sleep(4000);
       return true;
@@ -1131,16 +1135,24 @@
         const ok = await runChapterTaskLoop(state);
         // 本页任务点跑完 → 尝试点下一节
         const nxt = qsa('#prevNextFocusNext, a#prevNextFocusNext, a[onclick*="getTeacherAjax"], .nextChapter').find(e => /下一?节|下一个|下一章/.test(norm(e))) || qsa('#prevNextFocusNext')[0];
-        if (ok && chapRunning && nxt) { chapLog('点下一节'); nxt.click(); }
-        else if (ok && chapRunning) chapStatus('本章节任务点已跑完，回章节列表继续', 100);
+        if (ok && chapRunning && nxt) { chapLog('点下一节'); chapKeepGoing = true; nxt.click(); }
+        else if (ok && chapRunning) {
+          // 没有「下一节」按钮：记下进度，回章节列表继续下一章
+          state.chapterIdx = (state.chapterIdx || 0) + 1;
+          state.taskIdx = 0;
+          chapSave(state);
+          chapStatus('本章完成，回章节列表继续', 100);
+          if (state.listUrl) { chapKeepGoing = true; chapLog('回章节列表：' + state.listUrl); location.href = state.listUrl; }
+          else chapLog('没记住章节列表地址，请点「开始刷章节」所在的列表页刷新一下');
+        }
       } else {
         chapLog('当前页面不是课程章节页，请先打开「课程 → 章节」');
       }
     } finally {
       chapRunning = false;
-      state.running = false;
+      if (!chapKeepGoing) { state.running = false; chapStatus('已停止'); }
       chapSave(state);
-      chapStatus('已停止');
+      chapKeepGoing = false;
     }
   }
 
@@ -1562,12 +1574,12 @@
   $('cxb-chap-start').onclick = () => withBusy(chapterRun);
   // 点进章节会整页跳转，脚本重载后自动接着刷（状态存在 GM 里）
   setTimeout(() => {
-    if (!chapRunning && chapKind() === 'study') {
+    if (!chapRunning && (chapKind() === 'study' || chapKind() === 'course')) {
       const st = chapLoad();
       if (st && st.running) { chapLog('检测到上次没刷完，自动继续'); withBusy(chapterRun); }
     }
   }, 2000);
-  $('cxb-chap-stop').onclick = () => { chapRunning = false; chapLog('你点了停止'); chapStatus('已停止'); };
+  $('cxb-chap-stop').onclick = () => { chapRunning = false; const st = chapLoad(); st.running = false; chapSave(st); chapLog('你点了停止'); chapStatus('已停止'); };
   $('cxb-chap-skip').onclick = () => { chapSkip = true; chapLog('跳过当前任务点'); };
   $('cxb-chap-diag').onclick = () => withBusy(async () => { log('选择器命中：' + chapterDiagText()); await reportChapter(); });
 
