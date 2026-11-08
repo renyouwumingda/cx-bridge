@@ -187,5 +187,15 @@ MIT（见 `LICENSE`）。第三方项目只借鉴了做法，未复制其代码�
 plugin_manager(action: "install_bundle", target: "<仓库>/dsh-bundle")
 ```
 
-装完需要重启 DSH 生效。换机器时改 `dsh-bundle/cordis.patch.yml` 里的两处绝对路径
+装完需要重启 DSH 生效。重启后在「设置 → 插件 → 已安装」里能看到一张卡片：
+
+- 显示名取自 `dsh-bundle/locale/zh.json` 的 `meta.title`（**学习通答题桥**），搜索 `cx` 或 `学习通` 都能找到；
+- 卡片上的开关控制的是 bundle 里的 `dsh-cx-bridge` 这一行（一个不注册服务的空入口），
+  MCP 连接本身是同一 bundle 的第二行 `mcp-cx-bridge`，关掉整个 bundle 两者一起失效；
+- 真正的功能证据是会话工具列表里的 `cx_status` / `cx_take_questions` / `cx_submit_answers` / `cx_report`。
+
+> 为什么要有那个「空入口」：如果 bundle 里只有一条 MCP 连接行，它装得上、工具也能用，
+> 但设置界面不会把它渲染成插件卡片（实测），所以补了一行 `index.js`（`export const name` + 空的 `apply`，整段 try/catch）。
+
+换机器时改 `dsh-bundle/cordis.patch.yml` 里的两处绝对路径
 （`command` 指向 node，`args[0]` 指向 `cx-mcp.js`）。
