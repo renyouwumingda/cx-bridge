@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.3
+// @version      0.6.4
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.3'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.4'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1020,7 +1020,13 @@
   }
 
   // 处理当前任务点：视频播完 / 文档停留
+  // 测验/作业/考试/讨论/投票 这类任务点只点开不交也会产生「已开始」记录，直接跳过（我们只刷视频/文档）
+  const SKIP_TASK_RE = /测验|作业|考试|讨论|投票|问卷|互评|章节检测|签到/;
   async function handleTask(item, idx) {
+    if (SKIP_TASK_RE.test(item.name)) {
+      chapLog('跳过非视频任务点：' + item.name);
+      return true;
+    }
     chapLog('任务点 ' + (idx + 1) + '：' + item.name);
     try { item.el.click(); } catch (e) { chapLog('点不动这个任务点：' + (e.message || e)); }
     await sleep(2500);
@@ -1043,6 +1049,16 @@
           v.muted = true;
           if (v.playbackRate < 2) v.playbackRate = 2;
           if (v.paused && !v.ended) await v.play().catch(() => {});
+          if (v.paused && !v.ended) {
+            // 有的播放器必须先点大播放按钮，直接调 play() 不生效
+            try {
+              const d = v.ownerDocument || document;
+              const btn = d.querySelector('.vjs-big-play-button, .xgplayer-start, .prism-big-play-btn, [class*="bigPlay"], [class*="play-btn"], [class*="playButton"]');
+              if (btn) btn.click(); else v.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            } catch (e) {}
+            await sleep(600);
+            if (v.paused && !v.ended) await v.play().catch(() => {});
+          }
         } catch (e) {}
         const cur = v.currentTime || 0, dur = v.duration || 0;
         if (dur && cur >= dur - 2) continue;

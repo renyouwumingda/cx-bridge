@@ -123,6 +123,7 @@ def run_phase_b(browser, ok):
     ok.append(("识别任务点并点击", "任务点 1" in log))
     ok.append(("视频按 2 倍速播放", "2×" in log or "2x" in log))
     ok.append(("视频播完", "播完" in log))
+    ok.append(("跳过测验类任务点", "跳过非视频任务点" in log))
     ctx.close()
 
 def main():

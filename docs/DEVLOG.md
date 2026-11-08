@@ -1,3 +1,10 @@
+## v0.6.4（2026-11-08）刷章节只刷视频/文档，播放器兜底
+
+- 任务点名字命中 `测验|作业|考试|讨论|投票|问卷|互评|章节检测|签到` 时直接跳过并记日志——这类任务点只点开不交也会产生「已开始」记录，宁可不动。
+- 视频 `play()` 后仍 `paused` 时，按 `.vjs-big-play-button / .xgplayer-start / .prism-big-play-btn / [class*="bigPlay"] / [class*="play-btn"]` 补点播放按钮，再试一次 `play()`（各学校播放器 DOM 不同）。
+- fixture 增加一个「2.2 章节测验（10 题）」任务点；e2e_chapter 增加「跳过测验类任务点」断言，12 项全 PASS。
+- 全量回归（隔离 8794）：test_server 19、e2e_test、e2e_real、e2e_dowork 6/6、e2e_newstyle 2/2、sandbox_sim、e2e_idempotent 7 项全 PASS。
+
 ## v0.6.3（2026-11-08）刷章节兼容新版页面 + 自动上报结构
 
 - 章节列表：`.chapter_item` 找不到时退回 `h3`，并按九九助手的判据用 `outerHTML`（含 `data-cid="chapterId=…"` 或 `onclick` 带 `toOld`）过滤；同一章用 chapterId 去重。
