@@ -671,3 +671,12 @@ python sandbox_sim.py
 - 改法：`findVideos()` 同时收 `video, audio`；对 `.audioReader` 里只有 `<source>` 的情况，补建一个 `<audio src=...>` 再播放。播放逻辑（静音、2 倍速、卡住看门狗、播完判定）不变。
 - 测试：fixture 加 `&audio=1`（点击任务点生成 `.audioReader > audio`，duration/currentTime/play 全 mock）；`e2e_chapter.py` 加 `run_phase_e`，断言音频被当媒体播放（不是「按文档处理」）、2 倍速、静音；e2e 共 17 项 PASS。
 - 备注：e2e 里预置 GM 状态必须**双重 JSON 编码**（`JSON.stringify(JSON.stringify(obj))`），因为 STUB 的 `GM_setValue` 会再 stringify 一次；单层编码会让 `chapLoad()` 解析失败、自动继续不触发。
+
+## 2026-11-08 v0.6.9 刷章节：旧进度不自动跑 + 本次统计
+
+- 现象 1：进度里没有时间戳，隔天打开课程页脚本会自己开刷，容易被吓到/被误认为失控。
+  改法：`chapSave()` 写 `at`；自动继续前判断 `ageH > 12` → 不跑，改写 `running=false` 并提示「上次进度是 X 小时前的……点『继续上次』」。
+- 现象 2：控制台只有「第几章」，看不到这轮跑了多少。
+  改法：`stats {tasks, skipped}` 在任务点开始时 +1、跳过测验类 +1；`statsTail()` 拼到「刷章节」状态行；`chapSave()` 在缺 `stats` 时从旧状态继承，避免中途保存把统计清掉。
+- 测试：e2e 加 `run_phase_f`（13 小时前的旧进度 → 只提示、不开跑）与「本次统计记了任务点」断言；e2e 共 19 项 PASS。
+- 踩坑：`handleTask(item, idx)` 没有 `state` 参数，直接在里面对 `state` 操作会 `ReferenceError`（页面流程整段卡住）→ 改成 `chapLoad()/chapSave()`。

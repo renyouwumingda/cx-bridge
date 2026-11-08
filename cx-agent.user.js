@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.8
+// @version      0.6.9
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.8'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.9'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -918,7 +918,17 @@
     return 'other';
   }
   function chapLoad() { try { return JSON.parse(GM_getValue(CH_KEY, '{}')) || {}; } catch (e) { return {}; } }
-  function chapSave(o) { try { GM_setValue(CH_KEY, JSON.stringify(o)); } catch (e) {} }
+  function chapSave(o) {
+    try {
+      o.at = Date.now();
+      // 其它分支保存进度时把「本次统计」带上，别让中途一次 chapSave 把统计清掉
+      if (!o.stats) {
+        const prev = JSON.parse(GM_getValue(CH_KEY, '{}') || '{}');
+        if (prev && prev.stats) o.stats = prev.stats;
+      }
+      GM_setValue(CH_KEY, JSON.stringify(o));
+    } catch (e) {}
+  }
   function chapLog(m) { log('[章节] ' + m); }
   function chapStatus(m, pct) {
     const el = $('cxb-chap-state'); if (el) el.textContent = m;
@@ -1040,6 +1050,7 @@
   async function handleTask(item, idx) {
     if (SKIP_TASK_RE.test(item.name)) {
       chapLog('跳过非视频任务点：' + item.name);
+      try { const s = chapLoad(); s.stats = s.stats || { tasks: 0, skipped: 0 }; s.stats.skipped += 1; chapSave(s); } catch (e) {}
       return true;
     }
     chapLog('任务点 ' + (idx + 1) + '：' + item.name);
@@ -1047,6 +1058,7 @@
     await sleep(2500);
 
     const end = Date.now() + 45 * 60 * 1000;
+    try { const s0 = chapLoad(); s0.stats = s0.stats || { tasks: 0, skipped: 0 }; s0.stats.tasks += 1; chapSave(s0); } catch (e) {}
     let lastLog = 0;
     // 视频卡住（currentTime 不涨）的看门狗：先重试播放，长时间不动就跳过，别把整门课卡死
     const stall = new Map();
@@ -1360,6 +1372,17 @@
       } else setInfo('report', '还没有');
     } catch (e) { setInfo('report', '-'); }
   }
+  function statsTail(st) {
+    const s = (st && st.stats) || {};
+    const parts = [];
+    if (s.tasks) parts.push('本次 ' + s.tasks + ' 个任务点');
+    if (s.skipped) parts.push('跳过 ' + s.skipped);
+    if (st && st.at) {
+      const mins = Math.round((Date.now() - (st.startAt || st.at)) / 60000);
+      if (mins > 0) parts.push('用时 ' + mins + ' 分');
+    }
+    return parts.length ? ' · ' + parts.join(' · ') : '';
+  }
   function refreshChapStats() {
     try {
       const st = chapLoad();
@@ -1370,9 +1393,9 @@
       if (kind === 'study') {
         const tasks = taskItems();
         const finished = tasks.filter(x => taskDone(x.el)).length;
-        txt = '学习页 · 任务点 ' + finished + '/' + tasks.length + (st.chapterIdx != null ? ' · 第 ' + (st.chapterIdx + 1) + ' 章' : '');
+        txt = '学习页 · 任务点 ' + finished + '/' + tasks.length + (st.chapterIdx != null ? ' · 第 ' + (st.chapterIdx + 1) + ' 章' : '') + statsTail(st);
       } else if (kind === 'course') {
-        txt = '列表页 · 已完成 ' + done + '/' + items.length + (st.running ? ' · 运行中' : '');
+        txt = '列表页 · 已完成 ' + done + '/' + items.length + (st.running ? ' · 运行中' : '') + statsTail(st);
       } else {
         txt = st.running ? '运行中 · 第 ' + ((st.chapterIdx || 0) + 1) + ' 章' : '未开始';
       }
@@ -1685,7 +1708,17 @@
   setTimeout(() => {
     if (!chapRunning && (chapKind() === 'study' || chapKind() === 'course')) {
       const st = chapLoad();
-      if (st && st.running) { chapLog('检测到上次没刷完，自动继续'); withBusy(chapterRun); }
+      if (st && st.running) {
+        const ageH = st.at ? (Date.now() - st.at) / 3600000 : 0;
+        if (st.at && ageH > 12) {
+          // 隔了很久（比如隔天）不自动开跑，免得你打开课程页它突然自己动
+          st.running = false; chapSave(st);
+          chapLog('上次进度是 ' + ageH.toFixed(1) + ' 小时前的，没有自动继续；要接着刷就点「继续上次」');
+        } else {
+          chapLog('检测到上次没刷完，自动继续（' + (ageH ? ageH.toFixed(1) + ' 小时前' : '刚刚') + '）');
+          withBusy(chapterRun);
+        }
+      }
     }
   }, 2000);
   $('cxb-chap-stop').onclick = () => { chapRunning = false; const st = chapLoad(); st.running = false; chapSave(st); chapLog('你点了停止'); chapStatus('已停止'); };

@@ -136,6 +136,27 @@ def run_phase_e(browser, ok):
     ok.append(("音频 2 倍速且静音", bool(info) and info.get("rate") == 2 and info.get("muted") is True))
     ctx.close()
 
+def run_phase_f(browser, ok):
+    """隔天打开：进度太旧不自动开跑，只提示「继续上次」"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(FIX + "?mode=course&courseId=333&alldone=1")
+    old_state = {"running": True, "chapterIdx": 1, "taskIdx": 0, "done": {}, "at": int((time.time() - 13 * 3600) * 1000)}
+    page.evaluate("s => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(JSON.stringify(s)))", old_state)
+    inject(page)
+    log, deadline = "", time.time() + 8
+    while time.time() < deadline:
+        cur = page.evaluate("() => { const e = document.querySelector('#cxb-log'); return e ? e.textContent : ''; }")
+        if cur:
+            log = cur
+        if "小时前的" in log:
+            break
+        page.wait_for_timeout(200)
+    print("----- 旧进度日志 -----")
+    print((log or "<empty>")[-200:])
+    ok.append(("旧进度不自动开跑", "小时前的" in log and "开始：章节列表页" not in log))
+    ctx.close()
+
 def run_phase_c(browser, ok):
     """视频 currentTime 不动：看门狗重试后跳过，不把流程卡死"""
     ctx = browser.new_context()
@@ -192,6 +213,12 @@ def run_phase_b(browser, ok):
     ok.append(("识别任务点并点击", "任务点 1" in log))
     ok.append(("视频按 2 倍速播放", "2×" in log or "2x" in log))
     ok.append(("视频播完", "播完" in log))
+    raw = page.evaluate("() => localStorage.getItem('gm:cxb_chapter_state')")
+    try:
+        st = json.loads(json.loads(raw)) if raw else {}
+    except Exception:
+        st = {}
+    ok.append(("本次统计记了任务点", ((st.get("stats") or {}).get("tasks") or 0) >= 1))
     ok.append(("跳过测验类任务点", "跳过非视频任务点" in log))
     ctx.close()
 
@@ -203,6 +230,7 @@ def main():
         run_phase_a2(browser, ok)
         run_phase_c(browser, ok)
         run_phase_e(browser, ok)
+        run_phase_f(browser, ok)
         run_phase_d(browser, ok)
         run_phase_b(browser, ok)
         browser.close()
