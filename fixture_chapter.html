@@ -15,6 +15,7 @@ function course() {
     ['第2章 稳恒磁场', false],
     ['第3章 电磁感应', false],
   ];
+  if (p.get('alldone') === '1') items.forEach(x => x[1] = true);
   if (p.get('v') === 'new') {
     // 新版/学校自建页：章节是 h3，innerHTML 里带 chapterId，没有 .chapter_item
     app.innerHTML = items.map(([name, done], i) =>

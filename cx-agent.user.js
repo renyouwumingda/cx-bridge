@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.6
+// @version      0.6.7
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.6'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.7'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -1178,7 +1178,13 @@
     chapRunning = true;
     const kind = chapKind();
     let state = chapLoad();
-    state.course = chapCourseKey();
+    const courseKey = chapCourseKey();
+    // 换了课程就把进度清零，避免把 A 课的第 3 章当成 B 课的第 3 章
+    if (state.course && courseKey && state.course !== courseKey) {
+      chapLog('换了课程（' + state.course + ' → ' + courseKey + '），进度从头开始');
+      state = { chapterIdx: 0, taskIdx: 0, done: {} };
+    }
+    state.course = courseKey;
     state.running = true;
     state.done = state.done || {};
     chapSave(state);

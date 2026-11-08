@@ -658,3 +658,9 @@ python sandbox_sim.py
   - 一轮没做完 → 缺题续跑（最多 3 轮）；
   - 会话退出时答案尚未落盘 → 面板误报「没写答案」，改为退出后再查 5 轮；
   - 「回填」只认页面内存答案 → 改为先从服务端 `GET /answers` 取。
+
+## 2026-11-08 v0.6.7 刷章节：换课程进度隔离
+
+- 现象：脚本猫里那份进度是全局的，A 课刷到第 3 章、换 B 课打开时会从「第 3 章」开始，跳过 B 课的前两章。
+- 改法：`chapterRun()` 里比较 `state.course` 与当前 `chapCourseKey()`（`courseId/clazzId`），不一致就把 `chapterIdx/taskIdx/done` 清零并提示「换了课程（旧 → 新），进度从头开始」，再写回新 key。
+- 测试：fixture 加 `&alldone=1`（所有章节标记已完成，流程停在列表页、日志可读）；`e2e_chapter.py` 加 `run_phase_d`，预置一份别的课程的旧进度，断言重置提示 + `chapterIdx` 归零；e2e 共 15 项 PASS。

@@ -92,6 +92,29 @@ def run_phase_a2(browser, ok):
         ok.append(("新版 h3 章节也能点进去", False))
     ctx.close()
 
+def run_phase_d(browser, ok):
+    """换了课程：旧进度作废（用「全部已完成」的列表页，流程不跳转，日志可读）"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(FIX + "?mode=course&courseId=222&alldone=1")
+    old_state = {"course": "111/0", "running": True, "done": {"ch0": 1}, "chapterIdx": 2, "taskIdx": 0}
+    page.evaluate("s => localStorage.setItem('gm:cxb_chapter_state', JSON.stringify(s))", json.dumps(old_state))
+    inject(page)
+    log, deadline = "", time.time() + 20
+    while time.time() < deadline:
+        cur = page.evaluate("() => { const e = document.querySelector('#cxb-log'); return e ? e.textContent : ''; }")
+        if cur:
+            log = cur
+        if "换了课程" in log:
+            break
+        page.wait_for_timeout(200)
+    print("----- 换课程日志 -----")
+    print((log or "<empty>")[-400:])
+    ok.append(("换课程会重置进度", "换了课程" in log))
+    st = state_of(page)
+    ok.append(("换课程后进度归零", st.get("chapterIdx") == 0))
+    ctx.close()
+
 def run_phase_c(browser, ok):
     """视频 currentTime 不动：看门狗重试后跳过，不把流程卡死"""
     ctx = browser.new_context()
@@ -158,6 +181,7 @@ def main():
         run_phase_a(browser, ok)
         run_phase_a2(browser, ok)
         run_phase_c(browser, ok)
+        run_phase_d(browser, ok)
         run_phase_b(browser, ok)
         browser.close()
 
