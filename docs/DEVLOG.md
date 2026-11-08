@@ -593,3 +593,14 @@ python sandbox_sim.py
 - 借鉴来源（做法层面，非复制）：zhu-hailin/chaoxing-ai-assistant（MIT）、Trashwbin/MultiAI-Answer-cx（MIT）、Khihl-lucky/ChaoXing-AutoAnswer、Fk-Chaoxing、HanKuCha、九九助手、GAOQI-GQ/xuexitong-deepseek-console、Samueli924/chaoxing、aquamarine5/ChaoxingSignFaker、cxOrz/chaoxing-signin。
 - 本仓库目前**未附开源许可证**（默认保留所有权利）。若要公开发布，先选一个 License（建议 MIT）再推。
 - 使用范围：仅限自己有权限访问的课程作业；脚本不自动提交，提交前请自行核对。
+
+## 2026-11-08 真实作业连续通过（记录）
+
+- 27 题作业（single 12 / blank 15，含 18 张题干图）：`ok 27 / total 27, fails 0`，回填耗时约 5 分钟（含做题）。
+- 40 题作业（single 21 / blank 19，含 25 张题干图）：`ok 40 / total 40, fails 0`。
+- 期间定位并修掉的问题：
+  - 做题会话大对象提交 `written: 0` → MCP 参数 `asObject()` + 合并写入；
+  - 重复点「开始做题」清空答案 → 题目指纹复用；
+  - 一轮没做完 → 缺题续跑（最多 3 轮）；
+  - 会话退出时答案尚未落盘 → 面板误报「没写答案」，改为退出后再查 5 轮；
+  - 「回填」只认页面内存答案 → 改为先从服务端 `GET /answers` 取。
