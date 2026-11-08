@@ -1,6 +1,6 @@
 # 把 cx-bridge 加进「登录时自动启动」（当前用户，不需要管理员）
 # 用法：powershell -ExecutionPolicy Bypass -File install-autostart.ps1
-$here = "C:\Users\10183\Desktop\ds\cx-bridge"
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $vbs = Join-Path $here "start-hidden.vbs"
 $startup = [Environment]::GetFolderPath("Startup")
 $lnk = Join-Path $startup "cx-bridge.lnk"

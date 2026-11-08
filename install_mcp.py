@@ -7,7 +7,9 @@ import time
 
 import yaml
 
-ROOT = r"C:\Users\10183\.dsh\profiles"
+ROOT = os.environ.get("DSH_PROFILES_DIR") or os.path.join(os.path.expanduser("~"), ".dsh", "profiles")
+NODE = os.environ.get("DSH_NODE_BIN") or shutil.which("node") or "node"
+MCP_JS = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "cx-mcp.js"))
 BLOCK = """# === cx-bridge MCP BEGIN ===
 - insert:
     - id: mcp-cx-bridge
@@ -15,9 +17,9 @@ BLOCK = """# === cx-bridge MCP BEGIN ===
       config:
         serverName: cx-bridge
         transport: stdio
-        command: 'C:\\node-v24.14.0-win-x64\\node.exe'
+        command: '{node}'
         args:
-          - 'C:\\Users\\10183\\Desktop\\ds\\cx-bridge\\cx-mcp.js'
+          - '{mcp_js}'
         toolCallTimeoutMs: 120000
 # === cx-bridge MCP END ===
 """
@@ -33,6 +35,8 @@ def has_entry(doc):
             return True
     return False
 
+
+BLOCK = BLOCK.replace("{node}", NODE).replace("{mcp_js}", MCP_JS)
 
 ok = True
 for profile in ("desktop", "web"):

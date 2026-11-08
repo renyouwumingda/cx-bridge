@@ -16,8 +16,10 @@
 // answers.json → 脚本轮询 /answers → 回填。
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const HERE = process.env.CXD_DATA_DIR || 'C:\\Users\\10183\\Desktop\\ds\\cx-bridge';
+// 数据目录：默认本文件所在目录；测试或多实例用 CXD_DATA_DIR 指到别处
+const HERE = process.env.CXD_DATA_DIR || path.dirname(fileURLToPath(import.meta.url));
 const PENDING = path.join(HERE, 'pending.json');
 const ANSWERS = path.join(HERE, 'answers.json');
 const REPORT = path.join(HERE, 'last-report.json');
