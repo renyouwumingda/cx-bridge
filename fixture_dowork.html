@@ -1,0 +1,103 @@
+<!doctype html><html><head><meta charset="utf-8"><title>作答页 fixture（照 trashwbin 文档的真实 padBom50 标记）</title>
+<style>.answerBg{display:block;margin:6px 0}.num_option{display:inline-block;width:20px}.check_answer{background:#cfc}.hoverDiv{margin:6px 0}</style>
+</head><body>
+<div class="fanyaMarking_left">
+ <div class="padBom50 questionLi fontLabel singleQuesId" typename="单选题" data="406012500" id="question406012500">
+  <h3 class="mark_name">1.（单选题）水的化学式是什么？</h3>
+  <div class="stem_answer">
+   <div class="clearfix answerBg" onclick="addChoice(this)"><span data="A" class="choice406012500 num_option fl">A</span><div class="fl answer_p"><p>H2O</p></div></div>
+   <div class="clearfix answerBg" onclick="addChoice(this)"><span data="B" class="choice406012500 num_option fl">B</span><div class="fl answer_p"><p>CO2</p></div></div>
+   <div class="clearfix answerBg" onclick="addChoice(this)"><span data="C" class="choice406012500 num_option fl">C</span><div class="fl answer_p"><p>NaCl</p></div></div>
+  </div>
+  <input type="hidden" id="answer406012500" value="">
+ </div>
+ <div class="padBom50 questionLi fontLabel singleQuesId" typename="多选题" data="406012501" id="question406012501">
+  <h3 class="mark_name">2.（多选题）下列属于碱的是？</h3>
+  <div class="stem_answer">
+   <div class="clearfix answerBg" onclick="addMultipleChoice(this)"><span data="A" class="choice406012501 num_option fl">A</span><div class="fl answer_p"><p>NaOH</p></div></div>
+   <div class="clearfix answerBg" onclick="addMultipleChoice(this)"><span data="B" class="choice406012501 num_option fl">B</span><div class="fl answer_p"><p>HCl</p></div></div>
+   <div class="clearfix answerBg" onclick="addMultipleChoice(this)"><span data="C" class="choice406012501 num_option fl">C</span><div class="fl answer_p"><p>KOH</p></div></div>
+   <div class="clearfix answerBg" onclick="addMultipleChoice(this)"><span data="D" class="choice406012501 num_option fl">D</span><div class="fl answer_p"><p>H2SO4</p></div></div>
+  </div>
+  <input type="hidden" id="answer406012501" value="">
+ </div>
+ <div class="padBom50 questionLi fontLabel singleQuesId" typename="判断题" data="406012502" id="question406012502">
+  <h3 class="mark_name">3.（判断题）水在标准大气压下的沸点是100℃。</h3>
+  <div class="stem_answer">
+   <div class="clearfix answerBg" onclick="addChoice(this)"><span data="true" class="choice406012502 num_option fl">A</span><div class="fl answer_p"><p>正确</p></div></div>
+   <div class="clearfix answerBg" onclick="addChoice(this)"><span data="false" class="choice406012502 num_option fl">B</span><div class="fl answer_p"><p>错误</p></div></div>
+  </div>
+  <input type="hidden" id="answer406012502" value="">
+ </div>
+ <div class="padBom50 questionLi fontLabel singleQuesId" typename="填空题" data="406012503" id="question406012503">
+  <h3 class="mark_name">4.（填空题）水由氢元素和____元素组成，化学式写作____。</h3>
+  <div class="stem_answer">
+   <div class="blankInpDiv"><textarea name="answerEditor4060125031" class="blankTextarea"></textarea></div>
+   <div class="blankInpDiv"><textarea name="answerEditor4060125032" class="blankTextarea"></textarea></div>
+  </div>
+  <input type="hidden" id="answer406012503" value="">
+  <a class="saveBtn" href="javascript:void(0)" onclick="window.__cxbSaved=(window.__cxbSaved||0)+1">保存</a>
+ </div>
+ <div class="padBom50 questionLi fontLabel singleQuesId" typename="简答题" data="406012504" id="question406012504">
+  <h3 class="mark_name">5.（简答题）简述牛顿第一定律。</h3>
+  <div class="stem_answer"><div class="blankInpDiv"><textarea name="answerEditor4060125041" class="blankTextarea"></textarea></div></div>
+  <input type="hidden" id="answer406012504" value="">
+ </div>
+ <div class="padBom50 questionLi fontLabel singleQuesId" typename="填空题" data="406012505" id="question406012505">
+  <h3 class="mark_name">6.（填空题）长直导线与半圆环组合在O点的磁感应强度大小（用公式填写）。</h3>
+  <div class="stem_answer"><div class="blankInpDiv"><textarea name="answerEditor4060125051" class="blankTextarea"></textarea></div></div>
+  <input type="hidden" id="answer406012505" value="">
+ </div>
+</div>
+</div>
+<script>
+/* 选项点击：toggle 选中态（真实页是 span 上加 check_answer，value 落在隐藏字段） */
+function markChoice(box, multi){
+  var span = box.querySelector('span.num_option'); var cls = span.className.replace(/\s*check_answer/g,'');
+  if(!multi){
+    document.querySelectorAll('span.choice' + box.closest('.questionLi').dataset.data).length;
+  }
+  var qid = box.closest('.questionLi').getAttribute('data');
+  var hidden = document.getElementById('answer'+qid);
+  if(!multi){
+    document.querySelectorAll('#question'+qid+' span.num_option').forEach(function(s){ s.className = s.className.replace(/\s*check_answer/g,''); });
+    span.className = cls + ' check_answer';
+    hidden.value = span.getAttribute('data');
+  } else {
+    if(/check_answer/.test(span.className)){ span.className = cls; }
+    else { span.className = cls + ' check_answer'; }
+    var vals=[]; document.querySelectorAll('#question'+qid+' span.num_option.check_answer').forEach(function(s){ vals.push(s.getAttribute('data')); });
+    hidden.value = vals.join('');
+  }
+}
+function addChoice(box){ markChoice(box,false); }
+function addMultipleChoice(box){ markChoice(box,true); }
+/* 假 UEditor：真实页里每个空/简答都是一个 UEditor 实例，落库值是 textarea[name=answerEditor<qid><n>] */
+var taMap = {};
+[].forEach.call(document.querySelectorAll("textarea"), function(t){ if(t.name) taMap[t.name]=t; if(t.id) taMap[t.id]=t; });
+function makeEditor(ta){
+  return {
+    _formula: '',
+    setContent: function(html){ ta.value = String(html).replace(/<[^>]*>/g,''); },
+    getContent: function(){
+      return this._formula ? '<p><img class="kfformula" data-latex="'+this._formula+'" /></p>' : ta.value;
+    },
+    execCommand: function(cmd, arg){
+      if(!/formula|tex|kity|math/i.test(cmd)) return false;
+      var latex = (arg && arg.latex) ? arg.latex : String(arg || '');
+      if(!latex) return false;
+      this._formula = latex;
+      ta.value = '[formula:' + latex + ']';
+      return true;
+    },
+    sync: function(){}
+  };
+}
+window.UE = { getEditor: function(id){
+  var ta = taMap[id] || document.querySelector('textarea[name="'+id+'"]') || document.getElementById(id);
+  if(!ta) return null;
+  if(!ta.__ed) ta.__ed = makeEditor(ta);
+  return ta.__ed;
+}};
+</script>
+</body></html>

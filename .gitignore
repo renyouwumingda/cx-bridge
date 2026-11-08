@@ -1,0 +1,27 @@
+# 运行时数据（含真实作业题干与答案，绝不进仓库）
+pending.json
+answers.json
+answers.prev.json
+answers-*.bak.json
+pending-*.bak.json
+last-report.json
+last-report.bak.json
+fill-report.json
+agent-state.json
+*.log
+server.out.log
+server.err.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 第三方调研材料（别人的代码/页面快照，只在本地参考）
+research/
+
+# 编辑器与系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

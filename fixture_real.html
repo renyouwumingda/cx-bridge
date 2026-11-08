@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>真实结构自检页 · cx-bridge</title>
+<style>
+  body { font: 14px/1.7 system-ui, -apple-system, "Microsoft YaHei", sans-serif; margin: 0; padding: 20px 24px 220px; background: #f6f7f9; color: #222; }
+  .marBom60 { background: #fff; border: 1px solid #e6e8eb; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; }
+  .mark_name { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
+  .colorShallow { color: #7a828b; font-weight: 400; margin-right: 4px; }
+  .mark_letter { list-style: none; margin: 0; padding: 0; }
+  .mark_letter li { padding: 6px 10px; margin: 4px 0; border: 1px solid #e6e8eb; border-radius: 6px; cursor: pointer; }
+  .mark_letter li:hover { border-color: #b9c4d0; }
+  .mark_letter li.check_answer { border-color: #3569d4; background: #eef3fd; font-weight: 600; }
+  textarea { width: 100%; min-height: 70px; box-sizing: border-box; }
+  #tip { position: fixed; left: 24px; bottom: 16px; background: #fff; border: 1px solid #e6e8eb; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #444; max-width: 520px; }
+  code { background: #f0f2f5; padding: 1px 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="fanyaMarking_left">
+
+  <!-- 第 1 题：单选（真实结构：ul.mark_letter > li） -->
+  <div class="marBom60 questionLi singleQuesId" data="213998352" id="question213998352" aria-label="题目详情">
+    <div class="aiArea"><div class="aiAreaContent">
+      <h3 class="mark_name colorDeep">1. <span class="colorShallow">(单选题)</span><span class="qtContent workTextWrap">下列离子在酸中稳定的是: ( )</span></h3>
+      <ul class="mark_letter colorDeep qtDetail" data-qtype="single">
+        <li data="A" onclick="addChoice(this)">A. Cu<sup>+</sup></li>
+        <li data="B" onclick="addChoice(this)">B. MnO<sub>4</sub><sup>2-</sup></li>
+        <li data="C" onclick="addChoice(this)">C. CrO<sub>4</sub><sup>2-</sup></li>
+        <li data="D" onclick="addChoice(this)">D. Hg<sub>2</sub><sup>2+</sup></li>
+      </ul>
+      <input type="hidden" id="answer213998352" name="answer213998352">
+    </div></div>
+  </div>
+
+  <!-- 第 2 题：多选 -->
+  <div class="marBom60 questionLi singleQuesId" data="213998360" id="question213998360" aria-label="题目详情">
+    <div class="aiArea"><div class="aiAreaContent">
+      <h3 class="mark_name colorDeep">2. <span class="colorShallow">(多选题)</span><span class="qtContent workTextWrap">下列哪些操作会使平衡向正反应方向移动？( )</span></h3>
+      <ul class="mark_letter colorDeep qtDetail" data-qtype="multiple">
+        <li data="A" onclick="addChoice(this)">A. 升高温度</li>
+        <li data="B" onclick="addChoice(this)">B. 增大压强</li>
+        <li data="C" onclick="addChoice(this)">C. 加入催化剂</li>
+        <li data="D" onclick="addChoice(this)">D. 移走生成物</li>
+      </ul>
+      <input type="hidden" id="answer213998360" name="answer213998360">
+    </div></div>
+  </div>
+
+  <!-- 第 3 题：判断 -->
+  <div class="marBom60 questionLi singleQuesId" data="213998370" id="question213998370" aria-label="题目详情">
+    <div class="aiArea"><div class="aiAreaContent">
+      <h3 class="mark_name colorDeep">3. <span class="colorShallow">(判断题)</span><span class="qtContent workTextWrap">催化剂能改变反应的平衡常数。</span></h3>
+      <ul class="mark_letter colorDeep qtDetail" data-qtype="judge">
+        <li data="true" onclick="addChoice(this)">对</li>
+        <li data="false" onclick="addChoice(this)">错</li>
+      </ul>
+      <input type="hidden" id="answer213998370" name="answer213998370">
+    </div></div>
+  </div>
+
+  <!-- 第 4 题：简答（UEditor 富文本 + 隐藏 textarea） -->
+  <div class="marBom60 questionLi singleQuesId" data="213998380" id="question213998380" aria-label="题目详情">
+    <div class="aiArea"><div class="aiAreaContent">
+      <h3 class="mark_name colorDeep">4. <span class="colorShallow">(简答题)</span><span class="qtContent workTextWrap">简述勒夏特列原理，并举一个工业上的应用。</span></h3>
+      <div class="edui-editor-iframeholder"><iframe style="width:100%;height:120px;border:1px solid #e6e8eb;border-radius:6px"></iframe></div>
+      <textarea name="answerEditor2139983801" style="display:none"></textarea>
+    </div></div>
+  </div>
+
+  <!-- 第 5 题：选项点了没反应（没有 onclick），用来测「隐藏字段兜底」 -->
+  <div class="marBom60 questionLi singleQuesId" data="213998390" id="question213998390" aria-label="题目详情">
+    <div class="aiArea"><div class="aiAreaContent">
+      <h3 class="mark_name colorDeep">5. <span class="colorShallow">(单选题)</span><span class="qtContent workTextWrap">下列哪个是强酸？( )</span></h3>
+      <ul class="mark_letter colorDeep qtDetail" data-qtype="single">
+        <li data="A">A. 醋酸</li><li data="B">B. 碳酸</li><li data="C">C. 盐酸</li><li data="D">D. 氢硫酸</li>
+      </ul>
+      <input type="hidden" id="answer213998390" name="answer213998390">
+    </div></div>
+  </div>
+
+</div>
+
+<div id="tip">
+  这是按真实学习通页面结构（<code>ul.mark_letter &gt; li</code>）造的<strong>可交互</strong>自检页。<br>
+  点 li 会切换 <code>check_answer</code>（单选互斥，多选不互斥），和 mooc2 的行为一致。<br>
+  脚本「提取」应显示 <strong>4 题</strong>；「回填」后看下面这行是否每道题都变成已选。
+  <div id="result" style="margin-top:8px;color:#3569d4;font-weight:600">尚未选择</div>
+</div>
+
+<script>
+  function refresh() {
+    const parts = [];
+    document.querySelectorAll('.questionLi').forEach(function (q) {
+      const picked = [...q.querySelectorAll('li.check_answer')]
+        .map(li => (li.getAttribute('data') || li.textContent.trim().slice(0, 1)).toUpperCase());
+      const ta = q.querySelector('textarea');
+      if (ta && ta.value) picked.push('TEXT');
+      const f = q.querySelector('input[id^="answer"]');
+      if (f && f.value) picked.push('F:' + f.value);
+      parts.push((q.getAttribute('data') || '?').slice(-3) + ':' + (picked.length ? picked.join('') : '—'));
+    });
+    document.getElementById('result').textContent = parts.join('   ');
+  }
+
+  // 复刻学习通 doWork 页的 addChoice：写 class + aria + 隐藏字段 #answer{qid}
+  window.addChoice = function (obj) {
+    const qBox = obj.closest('.questionLi');
+    if (!qBox) return;
+    const qid = qBox.getAttribute('data');
+    const ul = obj.closest('ul.mark_letter');
+    const multiple = ul && ul.getAttribute('data-qtype') === 'multiple';
+    if (!multiple) {
+      ul.querySelectorAll('li').forEach(x => {
+        x.classList.remove('check_answer');
+        x.setAttribute('aria-checked', 'false');
+      });
+    } else if (obj.classList.contains('check_answer')) {
+      obj.classList.remove('check_answer');
+      obj.setAttribute('aria-checked', 'false');
+    }
+    obj.classList.toggle('check_answer');
+    obj.setAttribute('aria-checked', obj.classList.contains('check_answer') ? 'true' : 'false');
+    const field = document.getElementById('answer' + qid);
+    if (field) {
+      field.value = [...ul.querySelectorAll('li.check_answer')]
+        .map(li => li.getAttribute('data')).join('');
+    }
+    refresh();
+  };
+
+  // 模拟 UEditor 写回隐藏 textarea
+  const iframe = document.querySelector('iframe');
+  const ta = document.querySelector('textarea[name^="answerEditor"]');
+  iframe.addEventListener('load', function () {});
+  setInterval(function () {
+    try {
+      const doc = iframe.contentDocument;
+      if (doc && doc.body && doc.body.textContent.trim() && ta.value !== doc.body.innerHTML) {
+        ta.value = doc.body.innerHTML;
+        refresh();
+      }
+    } catch (e) {}
+  }, 300);
+
+  refresh();
+</script>
+</body>
+</html>

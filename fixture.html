@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>cx-bridge 自检页（模拟学习通 mooc2 作业结构）</title>
+<style>
+  body { font-family: "Microsoft YaHei", Arial, sans-serif; margin: 0; background: #f5f6f8; color: #333; }
+  .top { background: #2b4f8c; color: #fff; padding: 12px 20px; font-size: 16px; }
+  .fanyaMarking_left { max-width: 880px; margin: 20px auto; padding: 0 20px 60px; }
+  .questionLi { background: #fff; border-radius: 6px; padding: 18px 22px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .mark_name { font-size: 13px; color: #8a8f99; margin-bottom: 8px; }
+  .Zy_TItle { font-size: 15px; line-height: 1.7; margin-bottom: 12px; }
+  .Zy_TItle .fontLabel { font-weight: 600; }
+  .stem_answer { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .answerBg { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border: 1px solid #e6e8eb; border-radius: 4px; cursor: pointer; }
+  .answerBg:hover { border-color: #7aa2e8; }
+  .num_option, .num_option_dx { flex: 0 0 22px; height: 22px; line-height: 22px; text-align: center; border: 1px solid #c9ced6; border-radius: 50%; font-size: 13px; }
+  .num_option.check_answer, .num_option_dx.check_answer { background: #2b4f8c; border-color: #2b4f8c; color: #fff; }
+  .answer_p { flex: 1; font-size: 14px; line-height: 22px; }
+  .blankItemDiv { margin-top: 8px; }
+  .blankItemDiv input { width: 260px; padding: 6px 8px; border: 1px solid #c9ced6; border-radius: 4px; font-size: 14px; }
+  .hint { max-width: 880px; margin: 16px auto 0; padding: 12px 16px; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; font-size: 13px; line-height: 1.8; }
+  #result { max-width: 880px; margin: 16px auto; padding: 12px 16px; background: #eef4ff; border: 1px solid #b9d0f5; border-radius: 6px; font-size: 14px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="top">自检页 · 模拟学习通 mooc2 作业结构（不是真作业，随便填）</div>
+
+<div class="hint">
+  用法：装好 <b>cx-agent</b> 后刷新本页 → 右下角面板 → <b>提取</b>（应显示 6 题：single 2 / judge 1 / blank 1 / multiple 1 / essay 1）
+  → <b>作答</b> → <b>回填</b> → 看下面「选择结果」是否被自动勾上。<br>
+  注意：本页 <b>不是</b> 真实作业页，答案对错无所谓，只验证「提取 → 作答 → 回填」这条链路。
+</div>
+
+<div class="fanyaMarking_left">
+
+  <!-- 第 1 题：单选 -->
+  <div class="questionLi singleQuesId" id="question1001" data-question-id="1001">
+    <div class="mark_name">一、单选题（每题 2 分）</div>
+    <div class="Zy_TItle">
+      <span class="fontLabel">1. 真空中磁感应强度为 B 的均匀磁场中，取一半径为 r 的半球面 S，则通过 S 的磁通量大小为</span>
+    </div>
+    <div class="stem_answer">
+      <div class="answerBg" qtype="0"><span class="num_option" data="A">A</span><span class="answer_p">πr²B</span></div>
+      <div class="answerBg" qtype="0"><span class="num_option" data="B">B</span><span class="answer_p">2πr²B</span></div>
+      <div class="answerBg" qtype="0"><span class="num_option" data="C">C</span><span class="answer_p">-πr²B sinα</span></div>
+      <div class="answerBg" qtype="0"><span class="num_option" data="D">D</span><span class="answer_p">-πr²B cosα</span></div>
+    </div>
+  </div>
+
+  <!-- 第 2 题：判断 -->
+  <div class="questionLi singleQuesId" id="question1002" data-question-id="1002">
+    <div class="mark_name">二、判断题（每题 2 分）</div>
+    <div class="Zy_TItle"><span class="fontLabel">2. 磁场线是闭合曲线，因此磁场是无源场。</span></div>
+    <div class="stem_answer">
+      <div class="answerBg" qtype="3"><span class="num_option" data="true">对</span><span class="answer_p">正确</span></div>
+      <div class="answerBg" qtype="3"><span class="num_option" data="false">错</span><span class="answer_p">错误</span></div>
+    </div>
+  </div>
+
+  <!-- 第 3 题：填空 -->
+  <div class="questionLi singleQuesId" id="question1003" data-question-id="1003">
+    <div class="mark_name">三、填空题（每题 2 分）</div>
+    <div class="Zy_TItle"><span class="fontLabel">3. 水的化学式是 ______。</span></div>
+    <div class="blankItemDiv"><input type="text" name="answerEditor10031" placeholder="请填写答案"></div>
+  </div>
+
+
+  <!-- 第 4 题：多选 -->
+  <div class="questionLi singleQuesId" id="question1004" data-question-id="1004">
+    <div class="mark_name">四、多选题（每题 3 分）</div>
+    <div class="Zy_TItle"><span class="fontLabel">4. 下列哪些是磁场的性质？</span></div>
+    <div class="stem_answer">
+      <div class="answerBg" qtype="1"><span class="num_option_dx" data="A">A</span><span class="answer_p">磁场对运动电荷有力的作用</span></div>
+      <div class="answerBg" qtype="1"><span class="num_option_dx" data="B">B</span><span class="answer_p">磁场线是闭合的</span></div>
+      <div class="answerBg" qtype="1"><span class="num_option_dx" data="C">C</span><span class="answer_p">磁场是有源场</span></div>
+      <div class="answerBg" qtype="1"><span class="num_option_dx" data="D">D</span><span class="answer_p">磁场具有能量</span></div>
+    </div>
+  </div>
+
+  <!-- 第 5 题：简答（UEditor 富文本） -->
+  <div class="questionLi singleQuesId" id="question1005" data-question-id="1005">
+    <div class="mark_name">五、简答题（每题 10 分）</div>
+    <div class="Zy_TItle"><span class="fontLabel">5. 简述安培环路定理的内容及其适用条件。</span></div>
+    <div class="edui-editor-iframeholder"><iframe style="width:100%;height:110px;border:1px solid #ddd"></iframe></div>
+    <textarea name="answerEditor10051" style="display:none"></textarea>
+  </div>
+
+  <!-- 第 6 题：题干是图片 -->
+  <div class="questionLi singleQuesId" id="question1006" data-question-id="1006">
+    <div class="mark_name">六、单选题（每题 2 分）</div>
+    <div class="Zy_TItle">
+      <span class="fontLabel">6. 如图所示，求穿过该平面的磁通量。</span>
+      <img src="data:image/png;base64,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" style="max-width:100%;margin-top:8px">
+    </div>
+    <div class="stem_answer">
+      <div class="answerBg" qtype="0"><span class="num_option" data="A">A</span><span class="answer_p">0.5 Wb</span></div>
+      <div class="answerBg" qtype="0"><span class="num_option" data="B">B</span><span class="answer_p">1 Wb</span></div>
+      <div class="answerBg" qtype="0"><span class="num_option" data="C">C</span><span class="answer_p">2 Wb</span></div>
+      <div class="answerBg" qtype="0"><span class="num_option" data="D">D</span><span class="answer_p">4 Wb</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="result">选择结果：（还没点选）</div>
+
+<script>
+(function () {
+  // 模拟学习通的选项行为：点一下就 toggle check_answer；单选互斥
+  document.addEventListener('click', function (ev) {
+    var marker = ev.target.closest && ev.target.closest('.num_option, .num_option_dx');
+    if (!marker) return;
+    var row = marker.closest('.answerBg');
+    var q = marker.closest('.questionLi');
+    if (!row || !q) return;
+    var multi = q.querySelector('.num_option_dx') != null;
+    var on = marker.classList.contains('check_answer');
+    if (!multi) {
+      q.querySelectorAll('.num_option, .num_option_dx').forEach(function (m) { m.classList.remove('check_answer'); });
+    }
+    if (on && !multi) {
+      // 单选再点一次 = 取消
+    } else if (on) {
+      marker.classList.remove('check_answer');
+    } else {
+      marker.classList.add('check_answer');
+    }
+    render();
+  });
+
+  var input = document.querySelector('.blankItemDiv input');
+  if (input) input.addEventListener('input', render);
+
+  function render() {
+    var lines = [];
+    document.querySelectorAll('.questionLi').forEach(function (q) {
+      var picked = [...q.querySelectorAll('.num_option.check_answer, .num_option_dx.check_answer')]
+        .map(function (m) { return m.getAttribute('data') || m.textContent.trim(); });
+      var box = q.querySelector('input[type="text"]');
+      if (box && box.value) picked.push('填空=' + box.value);
+      lines.push(q.id + '：' + (picked.length ? picked.join(',') : '（未作答）'));
+    });
+    document.getElementById('result').textContent = '选择结果：\n' + lines.join('\n');
+  }
+})();
+</script>
+</body>
+</html>
