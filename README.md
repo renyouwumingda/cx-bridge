@@ -72,6 +72,7 @@ Windows 想后台常驻：双击 `start-hidden.vbs`（无窗口，日志写 `ser
   3. 文档/PPT 按停留计时处理，本页跑完自动点「下一节」；
   4. 进度存在脚本猫的存储里，整页跳转到下一章后会**自动继续**，点「停止」随时中断。
   只播视频、翻文档、点任务点，**不交章节测验、不交作业**。
+  任务点/视频都对真实页面做了加固：任务点收 7 套选择器（`.posCatalog_select`、`.posCatalog_name`、`.menulist-menu-title`、`#prevNextFocusList li`、`[id^="cur"]` 等），视频会递归进同源 iframe 找（`#iframe_content` 里再嵌播放器也能找到）；认不出页面就点「诊断结构」，把选择器命中数和候选 HTML 上报，我照着补。
 - **概览**：桥接在线状态、模型、数据目录、当前 task_id、题数/已答数，可一键打开服务日志。
 
 > 设计是照同类脚本（九九助手的「刷章节」、Trashwbin 的 UEditor/任务点处理）做的；

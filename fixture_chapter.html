@@ -41,12 +41,25 @@ function makeVideo() {
 
 function study() {
   app.innerHTML = '<h3>第2章 稳恒磁场</h3>' +
-    '<div class="posCatalog_select" id="task1">2.1 磁场视频（40 min）</div>';
-  document.getElementById('task1').onclick = () => {
-    const box = document.createElement('div');
-    box.id = 'videoBox';
-    box.appendChild(makeVideo());
-    app.appendChild(box);
+    '<div class="posCatalog_name" id="cur_task1">2.1 磁场视频（40 min）</div>' +
+    '<div id="iframe_content"></div>';
+  document.getElementById('cur_task1').onclick = () => {
+    const f = document.createElement('iframe');
+    f.style.cssText = 'width:300px;height:80px';
+    f.srcdoc = '<video id="v"></video>';
+    document.getElementById('iframe_content').innerHTML = '';
+    document.getElementById('iframe_content').appendChild(f);
+    f.onload = () => {
+      const v = f.contentDocument.getElementById('v');
+      const mock = makeVideo();
+      Object.defineProperty(v, 'duration', { get: () => 4 });
+      let t = 0;
+      Object.defineProperty(v, 'currentTime', { get: () => t, set: x => { t = x; } });
+      Object.defineProperty(v, 'paused', { get: () => !v._playing });
+      Object.defineProperty(v, 'ended', { get: () => t >= 3 });
+      v.play = () => { v._playing = true; v._timer = setInterval(() => { t += 0.5; if (t >= 3) { clearInterval(v._timer); v._playing = false; } }, 300); return Promise.resolve(); };
+      v.pause = () => { v._playing = false; };
+    };
   };
 }
 

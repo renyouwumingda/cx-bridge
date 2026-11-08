@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.0
+// @version      0.6.1
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.0'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.1'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -950,34 +950,58 @@
     return out;
   }
 
-  // 章节学习页：任务点
+  // 章节学习页：任务点。真实页面至少有三种写法（旧版/新版/学校自建），都收进来。
   function taskItems() {
-    let list = qsa('.posCatalog_select, .posCatalog_name, #prevNextFocusList a, .catalog_points li');
-    if (!list.length) list = qsa('a[onclick*="getTeacherAjax"], a[onclick*="toOld"], a[onclick*="changeDisplayContent"]');
-    const seen = new Set(), out = [];
-    list.forEach(el => {
-      const t = norm(el);
-      if (!t) return;
-      const key = t + '|' + (el.getAttribute('onclick') || '');
-      if (seen.has(key)) return; seen.add(key);
-      out.push({ el, name: t.slice(0, 40) });
+    const sels = [
+      '.posCatalog_select', '.posCatalog_name', '.menulist-menu-title',
+      '#prevNextFocusList li', '.catalog_points li',
+      '[id^="cur"]', '[id*="cur"]',
+    ];
+    const out = [], seen = new Set();
+    sels.forEach(sel => {
+      let list = [];
+      try { list = qsa(sel); } catch (e) { list = []; }
+      list.forEach(el => {
+        const t = norm(el);
+        if (!t || t.length > 80) return;
+        if (el.querySelector('input, textarea')) return;
+        const key = (el.id || '') + '|' + t.slice(0, 30);
+        if (seen.has(key)) return; seen.add(key);
+        out.push({ el, name: t.slice(0, 40), id: el.id || '' });
+      });
     });
-    return out.slice(0, 200);
+    return out.slice(0, 300);
   }
 
-  function sameOriginDocs() {
-    const docs = [document];
-    qsa('iframe').forEach(f => {
-      try { const d = f.contentDocument; if (d && d.body) docs.push(d); } catch (e) {}
-    });
+  // 递归收集同源文档（任务内容常常在 #iframe_content 里再嵌一层播放器）
+  function collectDocs(rootDoc, depth) {
+    const docs = [rootDoc || document];
+    const d0 = depth == null ? 2 : depth;
+    for (let i = 0; i < docs.length && i < 40; i++) {
+      if (d0 <= 0) break;
+      let frames = [];
+      try { frames = qsa('iframe', docs[i]); } catch (e) { frames = []; }
+      frames.forEach(f => {
+        try {
+          const d = f.contentDocument;
+          if (d && d.body && docs.indexOf(d) < 0) docs.push(d);
+        } catch (e) { /* 跨域 */ }
+      });
+    }
     return docs;
   }
+  function sameOriginDocs() { return collectDocs(document, 2); }
+
   function findVideos() {
     const out = [];
     sameOriginDocs().forEach(d => {
       try { qsa('video', d).forEach(v => out.push({ v, d })); } catch (e) {}
     });
     return out;
+  }
+  // 任务点是否已显示「已完成」
+  function taskDone(el) {
+    return !!el.querySelector('.icon.blue, [class*="complete"], [class*="finish"]') || /已完成/.test(norm(el));
   }
   function anyVideoPlaying() {
     return findVideos().some(({ v }) => !v.paused && !v.ended);
@@ -1062,6 +1086,33 @@
     return false;
   }
 
+  function chapterDiag() {
+    const counts = {};
+    ['.chapter_item', '.chapter_unit a', 'h3 a', '.posCatalog_select', '.posCatalog_name',
+     '.menulist-menu-title', '#prevNextFocusList li', '[id^="cur"]', 'video', 'iframe'].forEach(sel => {
+      try { counts[sel] = qsa(sel).length; } catch (e) { counts[sel] = -1; }
+    });
+    return counts;
+  }
+  function chapterDiagText() {
+    return Object.entries(chapterDiag()).map(([k, v]) => k + '=' + v).join('，');
+  }
+  async function reportChapter() {
+    const diag = chapterDiag();
+    const cands = []
+      .concat(qsa('.chapter_item, .posCatalog_select, .posCatalog_name, #prevNextFocusList li'))
+      .slice(0, 25)
+      .map((el, i) => ({ i, id: el.id || '', cls: el.className || '', html: (el.outerHTML || '').replace(/data:image[^"']*/g, '<img>').slice(0, 400) }));
+    try {
+      await postJSON('/report', {
+        url: location.href, at: new Date().toISOString(), kind: 'chapter',
+        count: cands.length, diag, containers: cands.length,
+        markup: cands, questions: [], chapter: chapterDiag(),
+      });
+      log('章节结构已上报（' + cands.length + ' 个候选）');
+    } catch (e) { log('章节结构上报失败：' + (e.message || e)); }
+  }
+
   async function chapterRun() {
     chapRunning = true;
     const kind = chapKind();
@@ -1071,6 +1122,7 @@
     state.done = state.done || {};
     chapSave(state);
     chapLog('开始：' + (kind === 'course' ? '章节列表页' : kind === 'study' ? '章节学习页' : '未知页面'));
+    chapLog('选择器命中：' + chapterDiagText());
     try {
       if (kind === 'course') {
         const ok = await goNextChapter(state);
@@ -1078,7 +1130,7 @@
       } else if (kind === 'study') {
         const ok = await runChapterTaskLoop(state);
         // 本页任务点跑完 → 尝试点下一节
-        const nxt = qsa('#prevNextFocusNext, a[onclick*="getTeacherAjax"]').find(e => /下一?节|下一个/.test(norm(e)));
+        const nxt = qsa('#prevNextFocusNext, a#prevNextFocusNext, a[onclick*="getTeacherAjax"], .nextChapter').find(e => /下一?节|下一个|下一章/.test(norm(e))) || qsa('#prevNextFocusNext')[0];
         if (ok && chapRunning && nxt) { chapLog('点下一节'); nxt.click(); }
         else if (ok && chapRunning) chapStatus('本章节任务点已跑完，回章节列表继续', 100);
       } else {
@@ -1090,20 +1142,6 @@
       chapSave(state);
       chapStatus('已停止');
     }
-  }
-
-  function chapterDiag() {
-    const kinds = {
-      'div.chapter_item': qsa('div.chapter_item').length,
-      '.chapter_unit a': qsa('.chapter_unit a').length,
-      'h3 a': qsa('h3 a').length,
-      '.posCatalog_select': qsa('.posCatalog_select').length,
-      '.posCatalog_name': qsa('.posCatalog_name').length,
-      '#prevNextFocusList a': qsa('#prevNextFocusList a').length,
-      'video': findVideos().length,
-      'iframe': qsa('iframe').length,
-    };
-    return kinds;
   }
 
   /* ---------------- 面板 ---------------- */
@@ -1146,6 +1184,7 @@
         <button id="cxb-chap-start" class="primary">开始刷章节</button>
         <button id="cxb-chap-stop">停止</button>
         <button id="cxb-chap-skip">跳过当前</button>
+        <button id="cxb-chap-diag">诊断结构</button>
       </div>
       <div id="cxb-chap-state" class="hint">在课程章节列表页或章节学习页点「开始刷章节」；只播视频、翻文档，不交测验/作业。</div>
       <div class="bar"><i id="cxb-chap-bar"></i></div>
@@ -1195,6 +1234,7 @@
   }
   tabBtns.forEach(b => { b.onclick = () => showTab(b.dataset.tab); });
   showTab((chapKind() === 'course' || chapKind() === 'study') ? 'chapter' : 'quiz');
+  if (chapKind() !== 'other') setTimeout(() => log('[章节] 选择器命中：' + chapterDiagText()), 1200);
 
   const infoVals = {
     engine: $('cxb-i-engine'), model: $('cxb-i-model'), data: $('cxb-i-data'),
@@ -1529,6 +1569,7 @@
   }, 2000);
   $('cxb-chap-stop').onclick = () => { chapRunning = false; chapLog('你点了停止'); chapStatus('已停止'); };
   $('cxb-chap-skip').onclick = () => { chapSkip = true; chapLog('跳过当前任务点'); };
+  $('cxb-chap-diag').onclick = () => withBusy(async () => { log('选择器命中：' + chapterDiagText()); await reportChapter(); });
 
 
   // 打开页面就自动上报一次结构：这样我不需要你点任何按钮，刷新一下我就能拿到真实标记。
