@@ -74,6 +74,24 @@ def run_phase_a(browser, ok):
         print("PAGEERRORS:", errors[:3])
     ctx.close()
 
+def run_phase_a2(browser, ok):
+    """新版页面：章节是 h3 + onclick 里带 chapterId，没有 .chapter_item"""
+    ctx = browser.new_context()
+    page = ctx.new_page()
+    page.goto(FIX + "?mode=course&v=new")
+    inject(page)
+    chapter_tab(page)
+    page.click("#cxb-chap-start")
+    try:
+        page.wait_for_url("**mode=study**", timeout=20000)
+        ok.append(("新版 h3 章节也能点进去", "mode=study" in page.url))
+    except Exception:
+        log = page.evaluate("() => { const e = document.querySelector('#cxb-log'); return e ? e.textContent : ''; }")
+        print("----- 新版页面日志 -----")
+        print((log or "<empty>")[-500:])
+        ok.append(("新版 h3 章节也能点进去", False))
+    ctx.close()
+
 def run_phase_b(browser, ok):
     ctx = browser.new_context()
     page = ctx.new_page()
@@ -112,6 +130,7 @@ def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         run_phase_a(browser, ok)
+        run_phase_a2(browser, ok)
         run_phase_b(browser, ok)
         browser.close()
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         学习通 AI 助手（cx-bridge）
 // @namespace    local.dsh.cxbridge
-// @version      0.6.2
+// @version      0.6.3
 // @description  提取学习通作业题目 -> 本地 cx-bridge 服务做题 -> 回填选项。不自动提交。
 // @author       local
 // @updateURL    http://127.0.0.1:8790/cx-agent.user.js
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '0.6.2'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
+  const VERSION = '0.6.3'; // 与文件头 @version 保持一致（面板上会显示，方便确认装的是哪版）
 
   const BRIDGE = 'http://127.0.0.1:8790';
   const SCROLL_WAIT = 400;
@@ -934,14 +934,25 @@
   function chapterItems() {
     let list = qsa('div.chapter_item, .chapter_item');
     if (!list.length) list = qsa('.chapter_unit a, h3 a, #mainid a');
+    if (!list.length) {
+      // 新版/学校自建页：h3 里带 chapterId 的 onclick，或 onclick 里带 toOld
+      list = qsa('h3').filter(el => {
+        const html = el.outerHTML || '';
+        const oc = (el.getAttribute('onclick') || '') + ((el.querySelector('a') || {}).getAttribute ? (el.querySelector('a').getAttribute('onclick') || '') : '');
+        return /chapterId/.test(html + oc) || /toOld/.test(oc);
+      });
+    }
     const seen = new Set(), out = [];
     list.forEach(el => {
       const a = el.tagName === 'A' ? el : (el.querySelector('a') || el);
       if (!a) return;
       const onclick = a.getAttribute('onclick') || a.getAttribute('href') || '';
       const isChapter = el.classList.contains('chapter_item') || !!(el.closest && el.closest('.chapter_item'));
-      if (!isChapter && !/chapterId|toOld|getTeacherAjax|studentstudy/.test(onclick)) return;
-      const key = onclick.replace(/\d+/g, '#') + '|' + norm(el).slice(0, 40);
+      // 新版页面章节信息常常只在 innerHTML（data-cid / onclick 文本）里，见九九助手的判据
+      const hay = onclick + ' ' + (el.outerHTML || '');
+      if (!isChapter && !/chapterId|toOld|getTeacherAjax|studentstudy/.test(hay)) return;
+      const cid = (onclick.match(/chapterId[=:'"]*(\d+)/) || [])[1];
+      const key = cid ? 'id:' + cid : (onclick.replace(/\d+/g, '#') + '|' + norm(el).slice(0, 40));
       if (seen.has(key)) return;
       seen.add(key);
       const t = norm(el);
@@ -1082,7 +1093,9 @@
       state.totalChapters = items.length;
       chapSave(state);
       chapStatus('第 ' + (idx + 1) + ' / ' + items.length + ' 章：' + items[idx].name, ((idx + 1) / items.length) * 100);
-      items[idx].el.click();
+      const target = items[idx].el;
+      try { target.click(); } catch (e) {}
+      try { const inner = target.querySelector && target.querySelector('a'); if (inner) inner.click(); } catch (e) {}
       await sleep(4000);
       return true;
     }
@@ -1207,6 +1220,7 @@
       <div class="kv"><span>数据目录</span><b id="cxb-i-data">-</b></div>
       <div class="kv"><span>本次任务</span><b id="cxb-i-task">-</b></div>
       <div class="kv"><span>题目/已答</span><b id="cxb-i-count">-</b></div>
+      <div class="kv"><span>刷章节</span><b id="cxb-i-chap">-</b></div>
       <div class="row"><button id="cxb-info-refresh">刷新状态</button><button id="cxb-open-logs">服务日志</button></div>
     </div>
     <div id="cxb-log-wrap">
@@ -1250,7 +1264,7 @@
 
   const infoVals = {
     engine: $('cxb-i-engine'), model: $('cxb-i-model'), data: $('cxb-i-data'),
-    task: $('cxb-i-task'), count: $('cxb-i-count'),
+    task: $('cxb-i-task'), count: $('cxb-i-count'), chap: $('cxb-i-chap'),
   };
   function setInfo(k, v) { const el = infoVals[k]; if (el) el.textContent = v == null || v === '' ? '-' : String(v); }
   async function refreshInfo() {
@@ -1269,6 +1283,26 @@
       if (st && st.task_id) setInfo('task', st.task_id);
     } catch (e) {}
     refreshQuizStats();
+    refreshChapStats();
+  }
+  function refreshChapStats() {
+    try {
+      const st = chapLoad();
+      const items = chapterItems();
+      const done = items.filter(x => x.done).length;
+      const kind = chapKind();
+      let txt;
+      if (kind === 'study') {
+        const tasks = taskItems();
+        const finished = tasks.filter(x => taskDone(x.el)).length;
+        txt = '学习页 · 任务点 ' + finished + '/' + tasks.length + (st.chapterIdx != null ? ' · 第 ' + (st.chapterIdx + 1) + ' 章' : '');
+      } else if (kind === 'course') {
+        txt = '列表页 · 已完成 ' + done + '/' + items.length + (st.running ? ' · 运行中' : '');
+      } else {
+        txt = st.running ? '运行中 · 第 ' + ((st.chapterIdx || 0) + 1) + ' 章' : '未开始';
+      }
+      setInfo('chap', txt);
+    } catch (e) { setInfo('chap', '-'); }
   }
   function refreshQuizStats() {
     const el = $('cxb-quiz-stats'); if (!el) return;
@@ -1630,6 +1664,16 @@
   // 打开时就探一次桥接服务
   ping().then(async p => {
     setState('已连接 · ' + p.model, '#1a7f37');
-    setTimeout(async () => { await quickReport(); await autoRun(); }, 1500);
+    setTimeout(async () => {
+      await quickReport();
+      try {
+        const k = 'cxb_chap_reported:' + location.href;
+        if (chapKind() !== 'other' && !sessionStorage.getItem(k)) {
+          sessionStorage.setItem(k, '1');
+          await reportChapter();
+        }
+      } catch (e) {}
+      await autoRun();
+    }, 1500);
   }).catch(() => setState('未连接（先运行 server.py）', '#c0392b'));
 })();

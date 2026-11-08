@@ -1,3 +1,12 @@
+## v0.6.3（2026-11-08）刷章节兼容新版页面 + 自动上报结构
+
+- 章节列表：`.chapter_item` 找不到时退回 `h3`，并按九九助手的判据用 `outerHTML`（含 `data-cid="chapterId=…"` 或 `onclick` 带 `toOld`）过滤；同一章用 chapterId 去重。
+- 打开章节：先 `el.click()`，再点它内部的 `a`（老版 `.chapter_item` 的链接常挂在里面）。
+- 概览页新增「刷章节」一行：列表页显示 已完成 N/M，学习页显示 任务点 N/M，运行时注明第几章。
+- 进课程页/学习页 1.5s 后自动 `reportChapter()`（每 URL 每标签页一次，`sessionStorage` 去重），`last-report.json` 的 `kind` 为 `chapter`。
+- fixture 增加 `?mode=course&v=new`（h3 + chapterId 结构）；e2e_chapter 增加该用例，11 项全 PASS。
+- 全量回归（隔离 8793）：test_server 19、e2e_test、e2e_real、e2e_dowork 6/6、e2e_newstyle 2/2、sandbox_sim、e2e_idempotent 7 项全 PASS。
+
 ## v0.6.2（2026-11-08）刷章节跨页续跑
 
 - 学习页刷完本章、且没有「下一节」按钮时：记下章节列表地址，`chapterIdx += 1`，跳回列表继续。

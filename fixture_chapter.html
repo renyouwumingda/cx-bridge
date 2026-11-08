@@ -15,6 +15,14 @@ function course() {
     ['第2章 稳恒磁场', false],
     ['第3章 电磁感应', false],
   ];
+  if (p.get('v') === 'new') {
+    // 新版/学校自建页：章节是 h3，innerHTML 里带 chapterId，没有 .chapter_item
+    app.innerHTML = items.map(([name, done], i) =>
+      '<h3 class="cell" data-cid="chapterId=' + (1000 + i) + '"' +
+      ' onclick="location.href=&quot;fixture_chapter.html?mode=study&ch=' + i + '&quot;">' + name +
+      (done ? ' <span class="icon blue">已完成</span>' : '') + '</h3>').join('');
+    return;
+  }
   app.innerHTML = items.map(([name, done], i) =>
     '<div class="chapter_item">' +
       '<a href="javascript:void(0)" onclick="location.href=\'fixture_chapter.html?mode=study&ch=' + i + '\'">' + name + '</a>' +
